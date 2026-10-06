@@ -13,9 +13,6 @@ from pydantic import BaseModel
 
 from agent import mcp_setup
 from agent.generation import GenerationInput, generate
-from agent.knowledge import events as ontology_events
-from agent.knowledge import ingest as ontology_ingest_module
-from agent.knowledge.store import OntologyStore
 from agent.llm import LLM
 from agent.mcp_bridge import manager
 from agent.prompts import DEFAULT_PERSONA
@@ -25,7 +22,6 @@ from integrations.board_url import InvalidBoardUrl, parse_board_url
 from integrations.html_sanitize import sanitize_html
 from integrations.html_text import html_to_text
 from integrations.notion_oauth import NotionAuthError
-from integrations.wiki_url import InvalidWikiUrl, parse_wiki_url
 
 from . import cards, history, settings
 from .jobs import jobs
@@ -104,15 +100,6 @@ def get_settings() -> dict:
 
 @app.put("/api/settings")
 def put_settings(patch: dict) -> dict:
-    wiki_url = patch.get("azure", {}).get("wiki_url")
-    if wiki_url and wiki_url.strip():
-        try:
-            parse_wiki_url(wiki_url)
-        except InvalidWikiUrl as err:
-            raise HTTPException(422, str(err)) from err
-    ontology_dir = (patch.get("ontology", {}).get("dir") or "").strip()
-    if ontology_dir and Path(ontology_dir).is_file():
-        raise HTTPException(422, "A pasta da ontologia aponta para um arquivo, não para uma pasta.")
     board_url = patch.get("azure", {}).get("board_url")
     if board_url is not None:
         if not board_url.strip():
@@ -252,7 +239,6 @@ def create_card(body: CardIn) -> dict:
             history.mark_created(body.story_id, result["id"], result["url"], result["title"])
         except Exception as err:  # noqa: BLE001 - o card JÁ existe no Azure: não perder essa informação
             result["warnings"].append(f"Card criado (#{result['id']}), mas não foi possível travar a história: {err}")
-        ontology_events.card_created(settings.load_settings(), result["id"], result["title"], body.card_type, body.epic_id)
         return result
 
 
@@ -319,69 +305,6 @@ def job_status(job_id: str) -> dict:
     return job.public()
 
 
-class IngestIn(BaseModel):
-    dry_run: bool = True          # ensaio: conta páginas e estima tokens, sem chamar o modelo
-    limit: int | None = None      # processa só as N primeiras páginas alteradas
-    notion: bool = False
-    force: bool = False           # ignora "nada mudou" (mesmo commit)
-
-
-_ingest_job: dict = {"id": None}
-
-
-@app.post("/api/ontology/ingest")
-def ontology_ingest(body: IngestIn) -> dict:
-    """Constrói/atualiza a ontologia em rascunhos. Uma execução por vez, só quando o usuário pede."""
-    current = jobs.get(_ingest_job["id"]) if _ingest_job["id"] else None
-    if current is not None and current.status == "running":
-        raise HTTPException(409, "Já existe uma ingestão em andamento.")
-    cfg = settings.load_settings()
-    if not (cfg.get("ontology", {}).get("dir") or "").strip():
-        raise HTTPException(422, "Configure a pasta da ontologia em ⚙️.")
-
-    def work(on_step):
-        llm = None if body.dry_run else LLM()
-        return ontology_ingest_module.run_ingest(llm, cfg, dry_run=body.dry_run, limit=body.limit, force=body.force,
-                                                 include_notion=body.notion, on_step=on_step)
-
-    job = jobs.start(work)
-    _ingest_job["id"] = job.id
-    return job.public()
-
-
-class SyncIn(BaseModel):
-    dry_run: bool = True
-
-
-@app.post("/api/ontology/sync-events")
-def ontology_sync_events(body: SyncIn) -> dict:
-    """Registra na cronologia as mudanças de estado dos cards (leitura educada, com ensaio)."""
-    current = jobs.get(_ingest_job["id"]) if _ingest_job["id"] else None
-    if current is not None and current.status == "running":
-        raise HTTPException(409, "Já existe uma ingestão ou sincronização em andamento.")
-    cfg = settings.load_settings()
-
-    def work(on_step):
-        return ontology_events.sync_events(cfg, dry_run=body.dry_run, on_step=on_step)
-
-    job = jobs.start(work)
-    _ingest_job["id"] = job.id
-    return job.public()
-
-
-@app.get("/api/ontology/lint")
-def ontology_lint() -> dict:
-    """Relatório do padrão STE-pt: notas com avisos (inclusive as editadas à mão) e contagens."""
-    folder = (settings.load_settings().get("ontology", {}).get("dir") or "").strip()
-    if not folder or not Path(folder).is_dir():
-        return {"configured": False, "notes": 0, "drafts": 0, "with_warnings": []}
-    notes = OntologyStore(Path(folder)).notes()
-    return {
-        "configured": True, "notes": len(notes), "drafts": sum(n.is_draft for n in notes),
-        "with_warnings": [{"path": n.path, "status": n.status, "warnings": n.warnings} for n in notes if n.warnings],
-    }
-
-
 @app.get("/api/agent/info")
 def agent_info() -> dict:
     """O que o agente enxerga com todas as fontes habilitadas: tools, skills, avisos e o prompt montado."""
@@ -412,14 +335,6 @@ def get_story(story_id: str) -> dict:
     if story is None:
         raise HTTPException(404, "História não encontrada.")
     return story
-
-
-@app.delete("/api/history/{story_id}")
-def delete_story(story_id: str) -> dict:
-    """Remove da lista local de recentes. O card no Azure DevOps (se existir) não é afetado."""
-    if not history.delete(story_id):
-        raise HTTPException(404, "História não encontrada.")
-    return {"ok": True}
 
 
 @app.put("/api/drafts/{story_id}")

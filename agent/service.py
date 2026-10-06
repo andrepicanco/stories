@@ -35,23 +35,17 @@ def build_agent(settings: dict, enabled_groups: list[str], memory_path: Path = M
     skills = SkillRegistry(resolve_dir(cfg["skills_dir"]))
     memory = Memory(memory_path)
 
-    # A ontologia não tem checkbox: fica ligada sempre que a pasta está configurada.
-    groups = list(enabled_groups)
-    if (settings.get("ontology", {}).get("dir") or "").strip() and "ontology" not in groups:
-        groups.append("ontology")
-
     all_tools, tool_errors = discover_tools(resolve_dir(cfg["tools_dir"]), ctx)
     all_tools.append(skills.tool())
-    tools = filter_tools(all_tools, groups)
+    tools = filter_tools(all_tools, enabled_groups)
 
     prompt = build_system_prompt(
         persona=cfg.get("system_prompt", ""),
         skills_block=skills.index_block(),
         memory_block=memory.prompt_block(),
-        enabled_groups=groups,
+        enabled_groups=enabled_groups,
         tools_by_group=count_by_group(tools),
         notion_root=settings["notion"].get("root_page", ""),
-        wiki_root=settings["azure"].get("wiki_url", ""),
     )
     return Agent(
         system_prompt=prompt,

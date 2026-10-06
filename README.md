@@ -16,14 +16,13 @@ Roda no seu computador, no navegador. Nada é publicado em lugar nenhum além do
 4. [Instalação](#instalação)
 5. [Como rodar](#como-rodar)
 6. [Configuração (⚙️)](#configuração-️)
-7. [Ontologia de Cobrança](#ontologia-de-cobrança)
-8. [Passo a passo de uma história](#passo-a-passo-de-uma-história)
-9. [Segurança: o que a IA pode e não pode fazer](#segurança-o-que-a-ia-pode-e-não-pode-fazer)
-10. [Onde ficam as coisas](#onde-ficam-as-coisas)
-11. [Testes](#testes)
-12. [Problemas comuns](#problemas-comuns)
-13. [Limitações conhecidas](#limitações-conhecidas)
-14. [Glossário](#glossário)
+7. [Passo a passo de uma história](#passo-a-passo-de-uma-história)
+8. [Segurança: o que a IA pode e não pode fazer](#segurança-o-que-a-ia-pode-e-não-pode-fazer)
+9. [Onde ficam as coisas](#onde-ficam-as-coisas)
+10. [Testes](#testes)
+11. [Problemas comuns](#problemas-comuns)
+12. [Limitações conhecidas](#limitações-conhecidas)
+13. [Glossário](#glossário)
 
 ---
 
@@ -36,14 +35,12 @@ O Stories faz essa pesquisa por você e entrega um rascunho **baseado em fatos q
 ## Como se usa (em 1 minuto)
 
 1. Clique em **📝 Nova História**.
-2. Escolha o **tipo de card** e o **épico** ao qual ele pertence. Os cards filhos desse épico aparecem à direita para você marcar os que se relacionam com o novo. Cada um mostra o **ícone do tipo** (📖 User Story, 🔧 Technical Story, 🔬 Spike, 🎨 Design Story, 🐞 Bug) e o da **fase** (⚪ a fazer, 🟡 refinamento, 🔵 em andamento, 🟣 validação, 🟠 entrega, ✅ concluído, ⛔ descontinuado). Passe o mouse para ver o título completo.
+2. Escolha o **tipo de card** e o **épico** ao qual ele pertence. Os cards filhos desse épico aparecem à direita para você marcar os que se relacionam com o novo.
 3. Marque de onde a IA pode buscar contexto: **Notion**, **Azure DevOps**, **Obsidian**.
 4. Escreva uma **descrição breve**. Pode indicar onde procurar (uma página, um card, um arquivo) e colar links.
 5. Clique em **Gerar ✨**. Acompanhe o andamento ao lado do botão.
 6. Leia o comentário do assistente em **Iteração e Refinamento**, edite os textos à vontade e use **Responder** para pedir ajustes. Repita quantas vezes quiser.
 7. Clique em **Criar card**. Aparece um alerta com o link do card criado, e a história fica travada e salva no histórico.
-
-Dicas: **Limpar card** apaga só os três textos gerados (card, recursos e critérios), mantendo o título e a descrição. Em **Recentes**, o **✕** remove a história **somente da lista local**; nenhum card do Azure DevOps é afetado. Clicar em qualquer ponto do título de **Contexto inicial** ou **Iteração e Refinamento** recolhe ou expande a seção.
 
 ## Como funciona por dentro
 
@@ -135,8 +132,6 @@ Clique na engrenagem, na barra lateral. As alterações ficam em `config/setting
 | **Board** *(obrigatório)* | O **link do board** do Azure DevOps (copie da barra de endereços ao abrir o board de Stories). Daqui saem a organização, o projeto, o time e o nível do backlog. |
 | **Colunas ativas de Épicos** | Marque as colunas do board de Épicos que contam como "ativas". Só os épicos nessas colunas aparecem na lista. As colunas vêm direto do seu board. |
 | **Servidor Azure Boards MCP** | Caminho do arquivo `AzureBoardsMcp.Server.dll` (opcional; sem ele o Azure continua funcionando pela API direta). |
-| **Wiki do Azure DevOps** *(opcional)* | O **link de uma página da wiki** do time (copie da barra de endereços). Essa página vira a raiz: o assistente lista, procura por título e lê as páginas **abaixo dela**, quando **Azure DevOps** está marcado. Pode ser de outro projeto. |
-| **Pasta da ontologia de Cobrança** *(opcional)* | Uma pasta de notas Markdown com os conceitos, sistemas, regras e eventos do domínio. Pode ficar dentro do seu vault do Obsidian. Veja a seção [Ontologia de Cobrança](#ontologia-de-cobrança). |
 | **Pasta raiz do Obsidian** | A pasta do seu *vault*. O assistente só lê arquivos `.md` dentro dela. |
 | **Página raiz do Notion** | Link da página principal do projeto, para o assistente focar as buscas ali. |
 | **Diretórios de skills e de tools** | Onde ficam as skills e as ferramentas (padrão: `agent/skills` e `agent/tools`). |
@@ -145,56 +140,6 @@ Clique na engrenagem, na barra lateral. As alterações ficam em `config/setting
 ### Conectar o Notion (uma vez)
 
 Ao lado de **Notion MCP**, na barra lateral, clique em **conectar**, entre na sua conta do Notion e autorize. Depois disso a conexão se renova sozinha.
-
-## Ontologia de Cobrança
-
-Wiki, Notion e cards dizem **o que foi decidido ou pedido**. A ontologia diz **o que as coisas são e como se ligam**: renegociação, negativação, CobranSaaS, CRM, regras, fluxos. Com ela, o assistente entende o tema antes de redigir e escreve cards mais precisos.
-
-### Como ela é
-Uma **pasta de notas Markdown**, uma nota por conceito, que você edita no Obsidian (o grafo do Obsidian mostra as ligações):
-
-```
-Conceitos/Renegociação.md     Sistemas/CobranSaaS.md     Fluxos/…   Regras/…   Repositorios/…
-Eventos/2026-10.md            (cronologia: uma linha por evento, em ordem de data)
-_rascunhos/<tipo>/<Nome>.md   (propostas da IA, ainda não confirmadas)
-```
-
-```
----
-tipo: conceito          # conceito | sistema | repositorio | fluxo | regra
-sinonimos: [reneg]      # termos NÃO aprovados: o texto usa só o nome da nota
-relacoes:
-  - {rel: executada_por, alvo: "[[CRM]]"}
-fontes: ["wiki:/Governança Ágil", "card:288965"]
-status: validado        # ou rascunho
----
-A renegociação troca as condições de uma dívida em atraso.
-```
-Evento: `- 2026-10-02 | card:288965 | Waiting Deploy → Done: título do card | [[Renegociação]]`
-
-Só notas **validadas** contam como fato: o que decide é o campo `status` (qualquer valor diferente de `validado` é rascunho). Sem `status`, uma nota em `_rascunhos/` é rascunho e as demais são validadas. Rascunhos aparecem para o assistente marcados como **NÃO CONFIRMADO**.
-
-### Como o assistente usa
-Quando a pasta está configurada, o assistente ganha quatro ferramentas de leitura: `ontologia_buscar`, `ontologia_conceito`, `ontologia_vizinhos` e `ontologia_linha_do_tempo`. Não há checkbox: fica ligada sempre que a pasta existe.
-
-### Como construir e manter (em ⚙️)
-1. **Construir / atualizar ontologia.** Lê a **wiki** (a raiz que você configurou) e extrai conceitos com a IA. Primeiro mostra uma **estimativa** (páginas, tokens, requisições) e pede confirmação. Tudo vira **rascunho com a fonte**. Nunca sobrescreve uma nota validada: uma atualização proposta vira um rascunho com `atualiza: [[Nota]]`. Uma segunda execução só reprocessa as páginas que mudaram.
-2. **Sincronizar eventos.** Lê as **mudanças de estado dos cards** no Azure DevOps (To Do, Waiting Deploy, Done…) e registra na cronologia. Também mostra a estimativa antes. Ao **criar um card** pela ferramenta, o evento "criado" é registrado sozinho.
-3. **Sugestões a cada geração.** Se o assistente aprender algo novo nas fontes, grava um **rascunho** e avisa ("📚 Sugestão para a ontologia").
-4. **Você revisa no Obsidian:** abra o rascunho, corrija e mude `status: rascunho` para `validado`. Só isso já a torna fato para o assistente, em qualquer pasta. Mover a nota para `Conceitos/`, `Sistemas/` etc. é opcional, só para organizar.
-5. **Verificar padrão STE-pt** lista as notas que fogem do padrão de escrita.
-
-### Padrão de escrita: STE-pt
-As descrições seguem a **ASD-STE100** (inglês técnico simplificado) adaptada ao português, com rigor de "80% do caminho": frases de até 20 palavras (máximo 25), parágrafos de até 6 frases, voz ativa, **um termo por conceito** (os sinônimos são termos não aprovados), siglas definidas na primeira vez, sem "etc.". O que a ferramenta escreve passa por um verificador (com uma reescrita automática). Edições manuais só geram **avisos**: nada é bloqueado. As regras completas estão em `agent/knowledge/ste_pt.md`.
-
-### Leitura educada e segura da wiki
-Para não sobrecarregar o Azure DevOps nem parecer uma varredura em massa com o seu PAT:
-- Baixa **uma única vez a subárvore da raiz** (zip), e não centenas de páginas. Há teto de tamanho (60 MB). Se o PAT não permitir, lê página a página.
-- Requisições **sequenciais**, com intervalo, `Retry-After` respeitado e **parada imediata** em 401/403.
-- Guarda o commit da raiz: se nada mudou, não lê conteúdo nenhum.
-- Só roda **quando você clica**, com estimativa e confirmação. Tetos de páginas e de tokens por execução (`ontology` em `config/settings.json`).
-- **Páginas com senhas, tokens ou chaves são puladas** (e listadas no relatório, sem copiar o trecho). Você pode excluir caminhos com `ontology.ingest_exclude`.
-- A trilha de auditoria fica em `storage/ontology-ingest.log` (só contagens e códigos, nunca o conteúdo).
 
 ## Passo a passo de uma história
 
@@ -232,10 +177,8 @@ Depois de criado, a história fica **travada** (não dá mais para editar) e apa
 
 ## Segurança: o que a IA pode e não pode fazer
 
-- ✅ **Pode ler** o Notion, os cards e a wiki do Azure DevOps e os arquivos `.md` da pasta do Obsidian que você configurou, **somente nas fontes que você marcou** na tela.
+- ✅ **Pode ler** o Notion, os cards do Azure DevOps e os arquivos `.md` da pasta do Obsidian que você configurou, **somente nas fontes que você marcou** na tela.
 - ❌ **Não pode criar nem alterar nada.** Criar o card é uma ação da tela, com a sua confirmação. As ferramentas de escrita do Notion e do Azure Boards MCP são bloqueadas antes de chegarem ao assistente.
-- ❌ **Não sai da página raiz da wiki.** Páginas fora dela são recusadas.
-- ✍️ **Só escreve na pasta da ontologia**, em `_rascunhos/` e `Eventos/`, e nunca sobrescreve uma nota validada.
 - ❌ **Não sai da pasta do Obsidian.** Caminhos fora dela, arquivos ocultos e pastas como `.obsidian` são recusados.
 - 🧼 **Todo HTML é limpo** antes de ir para a tela ou para o Azure: scripts e links perigosos são removidos.
 - 🔒 **Segredos ficam no `.env`** e em `storage/`, fora do git.
@@ -251,15 +194,14 @@ stories/
 ├── server/                 O servidor: API, histórico, criação de cards, execuções em segundo plano
 ├── agent/                  O assistente
 │   ├── harness/            O loop que orquestra modelo e ferramentas
-│   ├── knowledge/          Ontologia de Cobrança: leitura, ingestão, eventos, padrão STE-pt
-│   ├── tools/              Ferramentas de leitura (Obsidian, Azure REST, Wiki do Azure, Azure MCP, Notion, Ontologia)
+│   ├── tools/              Ferramentas de leitura (Obsidian, Azure REST, Azure MCP, Notion)
 │   ├── skills/             Manuais de escrita (uma pasta por skill, com um SKILL.md)
 │   ├── generation.py       Monta a tarefa e valida a resposta do modelo
 │   ├── memory.py           Memória de aprendizados
 │   └── mcp_bridge.py       Conexões com os servidores MCP
 ├── integrations/           Azure DevOps (API), OAuth do Notion, limpeza de HTML
 ├── config/                 settings.json (padrão) e settings.local.json (suas escolhas)
-├── storage/                Dados locais: histórico, memória, token do Notion, estado da ontologia (fora do git)
+├── storage/                Dados locais: histórico, memória, token do Notion (fora do git)
 ├── docs/                   Mapa de arquitetura (arquitetura.html e arquitetura.png)
 ├── tests/                  Testes automatizados
 └── .env                    Seus segredos (fora do git)
@@ -273,7 +215,7 @@ stories/
 .\.venv\Scripts\python.exe -m unittest discover -s tests -t .
 ```
 
-São testes automatizados que não dependem de internet nem criam nada no Azure (usam simulações). Cobrem o harness, as ferramentas, a limpeza de HTML, a geração, a ponte MCP, o OAuth do Notion, a criação de cards, a ontologia (leitura, padrão STE-pt, ingestão, eventos) e o cliente educado do Azure DevOps (limites de requisições).
+São testes automatizados que não dependem de internet nem criam nada no Azure (usam simulações). Cobrem o harness, as ferramentas, a limpeza de HTML, a geração, a ponte MCP, o OAuth do Notion e a criação de cards.
 
 ## Problemas comuns
 
@@ -294,10 +236,7 @@ São testes automatizados que não dependem de internet nem criam nada no Azure 
 - Uso **local e individual**: não há login nem vários usuários.
 - A memória é uma **lista simples** de frases; quem decide o que guardar é o modelo, então pedidos explícitos de "guarde isto" nem sempre são registrados.
 - O modelo às vezes repete os critérios de aceite dentro do texto do card. Se isso acontecer, peça para retirá-los pelo **Responder**.
-- A ontologia de Cobrança se **edita nas notas** (no Obsidian). Ainda não há tela de aprovar/rejeitar rascunhos dentro do Stories.
-- A busca na wiki é por **título/caminho**, não por conteúdo.
-- O **Notion** também alimenta a ontologia, mas por uma execução do agente (sem estimativa exata de custo) e só quando você a habilita.
-- A ingestão da wiki consome tokens do Azure OpenAI: use sempre a estimativa e o campo `ontology.ingest_exclude` para pular atas e retrospectivas.
+- A **edição da ontologia** (os tipos e efeitos das ferramentas) pela tela ainda não existe.
 
 ## Glossário
 
@@ -308,10 +247,7 @@ São testes automatizados que não dependem de internet nem criam nada no Azure 
 | **Ferramenta (tool)** | Uma ação que o agente pode pedir (ex.: "ler card 123"). |
 | **Skill** | Manual de instruções que o agente lê quando precisa (ex.: formato do card do time). |
 | **MCP** | Padrão para conectar ferramentas externas a agentes de IA. |
-| **Ontologia (das ferramentas)** | O vocabulário de tipos e efeitos que o harness usa para validar o que o modelo pede. |
-| **Ontologia de Cobrança** | O mapa do domínio (conceitos, sistemas, regras, eventos) em notas Markdown que o assistente consulta. |
-| **Rascunho** | Nota proposta pela IA, ainda não confirmada por você. Só vira fato depois de validada. |
-| **STE-pt** | Perfil em português da ASD-STE100, um padrão de escrita simples e sem ambiguidade. |
+| **Ontologia** | O vocabulário de tipos e efeitos que o harness usa para validar o que o modelo pede. |
 | **PAT** | *Personal Access Token*: a "senha de aplicativo" do Azure DevOps. |
 | **Épico** | Card grande que agrupa vários cards menores. |
 | **Related** | Tipo de vínculo entre cards no Azure DevOps. |

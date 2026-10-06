@@ -29,8 +29,7 @@ Sua resposta FINAL deve ser somente um objeto JSON válido, sem texto fora dele 
   "acceptance_criteria_html": "critérios de aceite em HTML",
   "comment": "mensagem ao usuário: fontes realmente consultadas (cards, páginas, notas), o que NÃO foi encontrado, suposições e dúvidas menores",
   "questions": ["pergunta 1", "pergunta 2"],
-  "feedback": {"sentiment": "positive|negative|neutral|none", "learnings": ["preferência durável"]},
-  "ontology_suggestions": [{"nome": "termo", "tipo": "conceito|sistema|repositorio|fluxo|regra", "descricao": "...", "sinonimos": [], "relacoes": [{"rel": "usa", "alvo": "Outro conceito"}], "fonte": "onde você viu isso"}]
+  "feedback": {"sentiment": "positive|negative|neutral|none", "learnings": ["preferência durável"]}
 }
 Regras do formato:
 - Use "mode": "questions" somente se faltar informação essencial que as fontes não resolvem: então envie até 2 \
@@ -45,12 +44,7 @@ impacted_resources_html; não os repita em card_html.
 detalhe, fontes preferidas), sem detalhes desta história. Um por ideia: NUNCA repita a mesma ideia com outras \
 palavras. Escreva cada um como INSTRUÇÃO curta e acionável, no imperativo (ex.: "Escreva critérios de aceite \
 objetivos e testáveis"), nunca como descrição vaga ("gosta de concisão"). Um pedido pontual de ajuste NÃO é aprendizado: só registre quando o usuário expressar uma preferência \
-que valha para histórias futuras. Na dúvida, deixe vazio — é o caso mais comum.
-- "ontology_suggestions": no máximo 3 conceitos, sistemas, fluxos ou regras de Cobrança que você aprendeu nas fontes \
-e que a ontologia NÃO tem (ou contradiz). Só inclua o que uma fonte realmente afirma; "fonte" é obrigatório (página, \
-card ou nota consultada) e sem fonte a sugestão é descartada. Escreva "descricao" no padrão STE-pt: frases de até 20 \
-palavras, voz ativa, um termo por conceito, sigla definida na primeira vez. Se não há nada novo, use [] (o caso mais \
-comum). Não repita o que a ontologia já tem."""
+que valha para histórias futuras. Na dúvida, deixe vazio — é o caso mais comum."""
 
 
 class GenerationError(RuntimeError):
@@ -86,7 +80,6 @@ class GenerationResult:
     steps: list[dict]
     warnings: list[str]
     hit_step_limit: bool
-    ontology_suggestions_saved: list[str] = field(default_factory=list)
 
 
 def build_task(inp: GenerationInput) -> str:
@@ -95,7 +88,7 @@ def build_task(inp: GenerationInput) -> str:
         parts.append(f"Épico: #{inp.epic['id']} — {inp.epic.get('title', '')}")
     if inp.related:
         listing = "\n".join(f"- #{c['id']} — {c.get('title', '')}" for c in inp.related)
-        parts.append("Cards relacionados (filhos do mesmo épico; leia o conteúdo deles (incluindo histórico de comentários) com as tools se ajudar):\n" + listing)
+        parts.append("Cards relacionados (filhos do mesmo épico; leia-os com as tools se ajudar):\n" + listing)
     parts.append("Descrição breve e orientações do usuário:\n" + (inp.brief.strip() or "(vazia)"))
 
     has_draft = any(t.strip() for t in (inp.card_html, inp.resources_html, inp.criteria_html))
@@ -121,8 +114,7 @@ def build_task(inp: GenerationInput) -> str:
     else:
         parts.append(
             "Tarefa: reúna o contexto antes de redigir. Consulte CADA fonte habilitada que seja relevante (ex.: busque "
-            "no Notion e leia as páginas pertinentes, leia os cards do Azure DevOps, procure nas notas do Obsidian; "
-            "se houver ontologia disponível, comece por ela para entender os conceitos e as relações do tema); "
+            "no Notion e leia as páginas pertinentes, leia os cards do Azure DevOps, procure nas notas do Obsidian); "
             "se uma fonte não trouxe nada útil, registre isso no comentário. Aplique a skill de escrita de cards "
             "adequada ao tipo (carregue-a com load_skill) e produza o card conforme o formato de saída."
         )
@@ -152,8 +144,7 @@ def parse_output(text: str) -> dict:
     sentiment = str(feedback.get("sentiment", "none")).lower()
     learnings = [" ".join(str(x).split())[:MAX_LEARNING_CHARS] for x in (feedback.get("learnings") or []) if str(x).strip()]
 
-    suggestions = [s for s in (data.get("ontology_suggestions") or []) if isinstance(s, dict)][:3]
-    out = {"mode": mode, "comment": comment, "questions": questions, "ontology_suggestions": suggestions,
+    out = {"mode": mode, "comment": comment, "questions": questions,
            "sentiment": sentiment if sentiment in ("positive", "negative", "neutral") else "none",
            "learnings": learnings[:MAX_LEARNINGS], "title": "", "card_html": "",
            "resources_html": "", "criteria_html": ""}
@@ -203,13 +194,6 @@ def generate(
 
     memory = Memory(agent.memory.path)
     saved = [fact for fact in parsed["learnings"] if inp.reply.strip() and memory.add(fact)]
-    suggested: list[str] = []
-    if parsed["ontology_suggestions"]:
-        try:
-            from .knowledge.suggestions import save_suggestions   # import tardio: evita ciclo com a ingestão
-            suggested = save_suggestions(llm, settings, parsed["ontology_suggestions"])
-        except Exception:  # noqa: BLE001 - a ontologia nunca pode derrubar a geração do card
-            suggested = []
 
     return GenerationResult(
         mode=parsed["mode"], title=parsed["title"], card_html=parsed["card_html"],
@@ -218,5 +202,4 @@ def generate(
         learnings_saved=saved,
         steps=[{"tool": s.tool, "args": s.args, "error": s.error} for s in result.steps],
         warnings=agent.warnings, hit_step_limit=result.hit_step_limit,
-        ontology_suggestions_saved=suggested,
     )

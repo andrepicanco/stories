@@ -3,7 +3,6 @@
   "theme": "dark",
   "azure": {
     "board_url": "",
-    "wiki_url": "",
     "epic_active_columns": [],
     "work_item_types": {
       "User Story": "User Story",
@@ -22,11 +21,6 @@
   },
   "obsidian": {
     "root_dir": ""
-  },
-  "ontology": {
-    "dir": "",
-    "ingest_max_pages": 150,
-    "ingest_exclude": []
   },
   "azure_mcp": {
     "command": "dotnet",

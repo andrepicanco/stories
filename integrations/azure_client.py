@@ -2,13 +2,11 @@
 import base64
 import json
 import os
-import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
 
 from .board_url import BoardContext
-from .wiki_url import WikiContext
 
 API_VERSION = "7.1"
 TIMEOUT_SECONDS = 30
@@ -198,80 +196,6 @@ def search_work_items(ctx: BoardContext, text: str, limit: int = 15) -> list[dic
          "type": fields[i].get("System.WorkItemType", ""), "url": work_item_url(ctx, i)}
         for i in ids if i in fields
     ]
-
-
-# ---------- Wiki (somente leitura, confinada à página raiz configurada) ----------
-
-MAX_WIKI_PAGES = 400   # teto de páginas percorridas na busca por título (fallback)
-_WIKI_ROOT_CACHE: dict[tuple, str] = {}
-
-
-def _wiki_base(wiki: WikiContext) -> str:
-    return f"{wiki.org_url}/{_quote(wiki.project)}/_apis/wiki/wikis/{_quote(wiki.wiki)}"
-
-
-def wiki_root_path(wiki: WikiContext) -> str:
-    """Caminho da página raiz configurada (resolvido pelo id da página; sem id, a wiki inteira)."""
-    if not wiki.page_id:
-        return "/"
-    key = (wiki.org_url, wiki.project, wiki.wiki, wiki.page_id)
-    if key not in _WIKI_ROOT_CACHE:
-        data = _get(f"{_wiki_base(wiki)}/pages/{wiki.page_id}?api-version={API_VERSION}")
-        _WIKI_ROOT_CACHE[key] = data.get("path") or "/"
-    return _WIKI_ROOT_CACHE[key]
-
-
-def _wiki_abs(wiki: WikiContext, relative: str) -> str:
-    """Caminho relativo à raiz -> caminho absoluto na wiki. Recusa '..' (não sai da raiz)."""
-    parts = [p for p in (relative or "").replace("\\", "/").split("/") if p and p != "."]
-    if ".." in parts:
-        raise AzureError("Caminho fora da página raiz da wiki.")
-    root = wiki_root_path(wiki).rstrip("/")
-    return "/".join([root, *parts]) or "/"
-
-
-def _wiki_relative(wiki: WikiContext, absolute: str) -> str:
-    root = wiki_root_path(wiki).rstrip("/")
-    return absolute[len(root):].lstrip("/") if root and absolute.startswith(root) else absolute.lstrip("/")
-
-
-def _flatten_pages(wiki: WikiContext, page: dict, out: list[str]) -> None:
-    for sub in page.get("subPages") or []:
-        out.append(_wiki_relative(wiki, sub["path"]))
-        _flatten_pages(wiki, sub, out)
-
-
-def wiki_list_pages(wiki: WikiContext, relative: str = "", full: bool = False) -> list[str]:
-    """Páginas abaixo de `relative` (caminhos relativos à raiz): filhas diretas, ou toda a árvore com full."""
-    level = "full" if full else "oneLevel"
-    data = _get(f"{_wiki_base(wiki)}/pages?path={_quote(_wiki_abs(wiki, relative))}"
-                f"&recursionLevel={level}&api-version={API_VERSION}")
-    pages: list[str] = []
-    _flatten_pages(wiki, data, pages)
-    return pages
-
-
-def wiki_get_page(wiki: WikiContext, relative: str = "") -> str:
-    """Conteúdo (markdown) da página."""
-    data = _get(f"{_wiki_base(wiki)}/pages?path={_quote(_wiki_abs(wiki, relative))}"
-                f"&includeContent=true&api-version={API_VERSION}")
-    return data.get("content") or ""
-
-
-def _plain(text: str) -> str:
-    """Minúsculas e sem acentos, para a busca por título."""
-    return "".join(c for c in unicodedata.normalize("NFKD", text.lower()) if not unicodedata.combining(c))
-
-
-def wiki_search(wiki: WikiContext, text: str, limit: int = 10) -> list[str]:
-    """Páginas sob a raiz cujo caminho contém todas as palavras do texto (sem acento, sem diferenciar
-    maiúsculas). É busca por título/caminho: o serviço de busca do Azure DevOps varre a wiki inteira e
-    devolve caminhos de arquivo que não se ligam com segurança à raiz configurada."""
-    words = _plain(text).split()
-    if not words:
-        return []
-    pages = wiki_list_pages(wiki, "", full=True)[:MAX_WIKI_PAGES]
-    return [p for p in pages if all(w in _plain(p) for w in words)][:limit]
 
 
 # ---------- Campos e criação de cards ----------

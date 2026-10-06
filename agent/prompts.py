@@ -21,7 +21,6 @@ GROUP_LABELS = {
     "notion": "Notion",
     "azure": "Azure DevOps",
     "obsidian": "Obsidian (anotações locais)",
-    "ontology": "Ontologia de Cobrança",
 }
 
 
@@ -33,22 +32,12 @@ def build_system_prompt(
     tools_by_group: dict[str, int],
     today: date | None = None,
     notion_root: str = "",
-    wiki_root: str = "",
 ) -> str:
     sources = []
     for group in enabled_groups:
         label = GROUP_LABELS.get(group, group)
         if tools_by_group.get(group, 0):
-            hint = ""
-            if group == "notion" and notion_root:
-                hint = f" (página raiz do projeto: {notion_root}; prefira buscar dentro dela)"
-            elif group == "ontology":
-                hint = (" (conceitos, sistemas, fluxos, regras e cronologia do time: consulte com ontologia_buscar, "
-                        "ontologia_conceito, ontologia_vizinhos e ontologia_linha_do_tempo ANTES de redigir; use os "
-                        "nomes aprovados dela e nunca os sinônimos; só conte como fato o que não vier marcado como "
-                        "NÃO CONFIRMADO)")
-            elif group == "azure" and wiki_root:
-                hint = " (cards, e também a wiki do time: use wiki_search, wiki_list_pages e wiki_read_page)"
+            hint = f" (página raiz do projeto: {notion_root}; prefira buscar dentro dela)" if group == "notion" and notion_root else ""
             sources.append(f"- {label}: disponível{hint}")
         else:
             sources.append(f"- {label}: indisponível nesta execução (não configurada ou sem conexão)")

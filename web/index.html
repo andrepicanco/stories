@@ -31,15 +31,12 @@
       <span class="title-emoji">📝</span>
       <input id="story-title" class="title-input" value="Nova História" spellcheck="false">
     </header>
-    <div id="toast" class="toast" role="alert" hidden>
-      <div id="toast-body" class="toast-body"></div>
-      <button id="toast-close" class="toast-close" title="Dispensar" aria-label="Dispensar alerta">✕</button>
-    </div>
+    <div id="toast" class="toast" hidden></div>
 
     <div class="columns">
       <div class="col col-left">
         <section id="sec-context" class="card collapsible">
-          <div class="card-head" role="button" tabindex="0"><h2>Contexto inicial</h2><button class="collapse" data-target="sec-context" title="Recolher">⌄</button></div>
+          <div class="card-head"><h2>Contexto inicial</h2><button class="collapse" data-target="sec-context" title="Recolher">⌄</button></div>
           <div class="card-body">
             <div class="form-grid">
               <label>Board</label>
@@ -68,7 +65,7 @@
         </section>
 
         <section id="sec-iter" class="card collapsible">
-          <div class="card-head" role="button" tabindex="0"><h2>Iteração e Refinamento</h2><button class="collapse" data-target="sec-iter" title="Recolher">⌄</button></div>
+          <div class="card-head"><h2>Iteração e Refinamento</h2><button class="collapse" data-target="sec-iter" title="Recolher">⌄</button></div>
           <div class="card-body">
             <div id="llm-comment" class="llm-comment"></div>
             <p id="memory-note" class="memory-note" hidden></p>
@@ -83,7 +80,7 @@
           <h2>Texto do card</h2>
           <div class="row-between">
             <label>Prévia do texto</label>
-            <span class="actions"><button id="btn-clear" class="btn" title="Apaga o texto do card, os recursos impactados e os critérios de aceite">Limpar card</button><button id="btn-create" class="btn btn-success">Criar card</button></span>
+            <button id="btn-create" class="btn btn-success">Criar card</button>
           </div>
           <div id="f-text" class="rich rich-tall"></div>
         </section>
@@ -120,14 +117,6 @@
         </details>
       </div>
       <label>Servidor Azure Boards MCP (caminho do AzureBoardsMcp.Server.dll) <input name="azure_mcp_dll" class="field"></label>
-      <label>Wiki do Azure DevOps (URL da página raiz, opcional) <input name="wiki_url" class="field" placeholder="https://dev.azure.com/org/projeto/_wiki/wikis/wiki/123/Pagina"></label>
-      <label>Pasta da ontologia de Cobrança (notas Markdown; opcional) <input name="ontology_dir" class="field" placeholder="C:\caminho\para\a\pasta\Ontologia"></label>
-      <div class="ontology-actions">
-        <button type="button" id="ontology-ingest" class="btn" title="Lê a wiki (um download da raiz configurada), extrai conceitos e grava RASCUNHOS na pasta da ontologia. Antes, mostra uma estimativa e pede confirmação.">Construir / atualizar ontologia</button>
-        <button type="button" id="ontology-events" class="btn" title="Lê as mudanças de estado dos cards (To Do, Waiting Deploy, Done...) e grava na cronologia. Antes, mostra quantos cards serão lidos e pede confirmação.">Sincronizar eventos</button>
-        <button type="button" id="ontology-lint" class="btn" title="Lista as notas que fogem do padrão de escrita STE-pt">Verificar padrão STE-pt</button>
-      </div>
-      <pre id="ontology-report" class="report" hidden></pre>
       <label>Pasta raiz do Obsidian <input name="obsidian_root" class="field"></label>
       <label>Página raiz do Notion <input name="notion_root" class="field"></label>
       <label>Diretório de skills <input name="skills_dir" class="field"></label>
