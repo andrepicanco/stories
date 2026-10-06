@@ -53,6 +53,12 @@ def get(story_id: str) -> dict | None:
     return _row(row) if row else None
 
 
+def delete(story_id: str) -> bool:
+    """Remove só do histórico local; nada é alterado no Azure DevOps."""
+    with _conn() as conn:
+        return conn.execute("DELETE FROM stories WHERE id = ?", (story_id,)).rowcount > 0
+
+
 def list_recent(limit: int = 30) -> list[dict]:
     with _conn() as conn:
         rows = conn.execute(

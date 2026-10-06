@@ -75,6 +75,29 @@ function renderEpicOptions(selectedId = "") {
   $("#f-epic").value = selectedId || "";
 }
 
+// Ícones de "Relacionados": tipo do card e fase (estado do Azure). Desconhecidos caem no padrão.
+const TYPE_ICONS = { "user story": "📖", "technical story": "🔧", "spike": "🔬", "design story": "🎨", "bug": "🐞" };
+const STATE_ICONS = {
+  "new": "⚪", "to do": "⚪",                                     // a fazer
+  "refining": "🟡", "tech refining": "🟡",                       // refinamento
+  "in progress": "🔵", "active": "🔵",                           // em andamento
+  "waiting validation qa": "🟣", "validating qa": "🟣", "user acceptance testing": "🟣",   // validação
+  "package integration": "🟠", "waiting deploy": "🟠", "validating prod": "🟠",   // entrega
+  "done": "✅", "closed": "✅",
+  "discontinued": "⛔", "removed": "⛔",
+};
+const typeIcon = (type) => TYPE_ICONS[(type || "").toLowerCase()] || "📄";
+const stateIcon = (state) => STATE_ICONS[(state || "").toLowerCase()] || "⚪";
+
+function relatedItem(c) {
+  const tip = `#${c.id} · ${c.title}\n${c.type} · ${c.state}`;
+  return `<li>
+    <input type="checkbox" data-id="${c.id}" ${epicState.relatedSelected.has(c.id) ? "checked" : ""}>
+    <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" title="${escapeHtml(tip)}">${c.id} ${escapeHtml(c.title)}</a>
+    <span class="icons" title="${escapeHtml(`${c.type} · ${c.state}`)}">${typeIcon(c.type)}${stateIcon(c.state)}</span>
+  </li>`;
+}
+
 async function loadChildren(epicId) {
   const list = $("#related");
   epicState.children = [];
@@ -84,10 +107,7 @@ async function loadChildren(epicId) {
     const children = await api(`/api/epics/${epicId}/children`);
     epicState.children = children;
     list.innerHTML = children.length
-      ? children.map((c) => `<li>
-          <input type="checkbox" data-id="${c.id}" ${epicState.relatedSelected.has(c.id) ? "checked" : ""}>
-          <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" title="${escapeHtml(`${c.type} · ${c.state}`)}">${c.id} ${escapeHtml(c.title)}</a>
-        </li>`).join("")
+      ? children.map(relatedItem).join("")
       : '<li class="muted">Este épico não tem cards filhos.</li>';
   } catch (err) {
     list.innerHTML = `<li class="muted">${escapeHtml(err.message)}</li>`;
@@ -149,6 +169,16 @@ function refreshEditable() {
   $("#btn-generate").disabled = locked || app.running;
   $("#btn-reply").disabled = locked || app.running;
   $("#btn-create").disabled = locked || app.running;
+  $("#btn-clear").disabled = locked || app.running;
+}
+
+function clearCard() {
+  if (!confirm("Limpar o texto do card, os recursos impactados e os critérios de aceite?\n\nO título e os demais campos são mantidos.")) return;
+  editors.text.setHTML("");
+  editors.resources.setHTML("");
+  editors.criteria.setHTML("");
+  alignCriteria();
+  scheduleSave();
 }
 
 function setMemoryNote(text) {
@@ -208,8 +238,19 @@ async function newStory() {
 async function refreshRecent() {
   const items = await api("/api/history");
   $("#recent").innerHTML = items
-    .map((s) => `<a data-id="${s.id}" class="${app.story && app.story.id === s.id ? "active" : ""}" title="${s.status === "created" ? `Criado no Azure DevOps (#${s.card_id})` : "Rascunho"}">${s.status === "created" ? "✅ " : ""}${escapeHtml(s.title)}</a>`)
+    .map((s) => `<div class="item"><a data-id="${s.id}" class="${app.story && app.story.id === s.id ? "active" : ""}" title="${s.status === "created" ? `Criado no Azure DevOps (#${s.card_id})` : "Rascunho"}">${s.status === "created" ? "✅ " : ""}${escapeHtml(s.title)}</a><button class="del" data-del="${s.id}" title="Remover da lista" aria-label="Remover da lista">✕</button></div>`)
     .join("");
+}
+
+/** Remove só da lista local; o card no Azure DevOps (se existir) não é afetado. */
+async function deleteStory(id) {
+  if (!confirm("Remover esta história da lista de recentes?\n\nO card no Azure DevOps, se já criado, não é afetado.")) return;
+  const wasOpen = app.story && app.story.id === id;
+  if (wasOpen) clearTimeout(app.saveTimer);   // um autosave pendente não deve recriar a história removida
+  await api(`/api/history/${id}`, { method: "DELETE" });
+  if (!wasOpen) { refreshRecent(); return; }
+  const rest = await api("/api/history");
+  if (rest.length) await openStory(rest[0].id); else await newStory();
 }
 
 /* ---------- Status e settings ---------- */
@@ -274,11 +315,110 @@ function fillSettingsForm() {
   epicColumns.loadedFor = null;
   loadEpicColumns();
   f.azure_mcp_dll.value = (s.azure_mcp.args || [])[0] || "";
+  f.wiki_url.value = s.azure.wiki_url || "";
+  f.ontology_dir.value = (s.ontology && s.ontology.dir) || "";
   f.obsidian_root.value = s.obsidian.root_dir;
   f.notion_root.value = s.notion.root_page;
   f.skills_dir.value = s.agent.skills_dir;
   f.tools_dir.value = s.agent.tools_dir;
   f.system_prompt.value = s.agent.system_prompt || app.defaults.system_prompt;
+}
+
+/* ---------- Ontologia: construir (com ensaio e confirmação) e verificar o padrão STE-pt ---------- */
+function showOntologyReport(text) {
+  const el = $("#ontology-report");
+  el.textContent = text;
+  el.hidden = !text;
+}
+
+async function pollBackgroundJob(id, onStep) {
+  for (;;) {
+    const job = await api(`/api/jobs/${id}`);
+    const last = job.steps[job.steps.length - 1];
+    if (last && onStep) onStep(last);
+    if (job.status !== "running") return job;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+}
+
+function summarizeIngest(r) {
+  const lines = [];
+  if (r.wiki) {
+    const w = r.wiki;
+    lines.push(w.sem_mudancas ? "Wiki: nada mudou desde a última leitura." :
+      `Wiki: ${w.paginas_na_raiz} páginas na raiz, ${w.paginas_a_processar} a processar` +
+      `${w.limitado_pelo_teto ? " (limitado pelo teto)" : ""}, ~${w.tokens_estimados} tokens estimados.` +
+      ` Leitura via ${w.via}, ${r.requests} requisição(ões).`);
+    if (w.puladas_por_segredo) lines.push(`Puladas por conterem segredos: ${w.puladas_por_segredo} (${r.skipped_secrets.join(", ")}).`);
+  }
+  if (r.notion) lines.push("Notion: " + (r.notion.observacao || r.notion.erro || `${r.notion.leituras} leituras, rascunhos ${JSON.stringify(r.notion.drafts)}, descartados sem fonte: ${r.notion.descartados_sem_fonte}`));
+  if (!r.dry_run && r.drafts && Object.keys(r.drafts).length) lines.push("Rascunhos: " + Object.entries(r.drafts).map(([k, v]) => `${k} ${v}`).join(", ") + ".");
+  if (r.stopped) lines.push("Parada: " + r.stopped);
+  if (r.errors && r.errors.length) lines.push(`Erros (${r.errors.length}):\n  ` + r.errors.slice(0, 5).join("\n  "));
+  return lines.join("\n");
+}
+
+async function runOntologyIngest() {
+  const button = $("#ontology-ingest");
+  button.disabled = true;
+  try {
+    showOntologyReport("Estimando (sem usar o modelo)...");
+    let job = await pollBackgroundJob((await api("/api/ontology/ingest", { method: "POST", body: { dry_run: true } })).id);
+    if (job.status === "error") throw new Error(job.error);
+    const estimate = summarizeIngest(job.result);
+    showOntologyReport(estimate);
+    const w = job.result.wiki;
+    if (w && (w.sem_mudancas || !w.paginas_a_processar)) return;
+    if (!confirm(`${estimate}\n\nIsso envia o texto das páginas ao Azure OpenAI e grava rascunhos na pasta da ontologia. Continuar?`)) return;
+    const started = await api("/api/ontology/ingest", { method: "POST", body: { dry_run: false } });
+    job = await pollBackgroundJob(started.id, (s) => showOntologyReport(`${estimate}\n\n${s.message || ""}`));
+    if (job.status === "error") throw new Error(job.error);
+    showOntologyReport(summarizeIngest(job.result));
+  } catch (err) {
+    showOntologyReport("Erro: " + err.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function summarizeEvents(r) {
+  const base = `Cards alterados desde ${r.desde}: ${r.cards_alterados}${r.limitado_pelo_teto ? " (limitado pelo teto; rode de novo para continuar)" : ""}.`;
+  if (r.dry_run) return `${base} ~${r.requisicoes_estimadas} requisições, uma por vez.`;
+  return `${base} Eventos novos: ${r.eventos_novos}. Requisições: ${r.requisicoes}.` +
+    (r.erros && r.erros.length ? `\nErros:\n  ${r.erros.slice(0, 5).join("\n  ")}` : "");
+}
+
+async function runEventsSync() {
+  const button = $("#ontology-events");
+  button.disabled = true;
+  try {
+    showOntologyReport("Estimando (sem gravar nada)...");
+    let job = await pollBackgroundJob((await api("/api/ontology/sync-events", { method: "POST", body: { dry_run: true } })).id);
+    if (job.status === "error") throw new Error(job.error);
+    const estimate = summarizeEvents(job.result);
+    showOntologyReport(estimate);
+    if (!job.result.cards_alterados) return;
+    if (!confirm(`${estimate}\n\nLeitura do histórico de cada card no Azure DevOps. Continuar?`)) return;
+    const started = await api("/api/ontology/sync-events", { method: "POST", body: { dry_run: false } });
+    job = await pollBackgroundJob(started.id, (s) => showOntologyReport(`${estimate}\n\n${s.message || ""}`));
+    if (job.status === "error") throw new Error(job.error);
+    showOntologyReport(summarizeEvents(job.result));
+  } catch (err) {
+    showOntologyReport("Erro: " + err.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function runOntologyLint() {
+  try {
+    const r = await api("/api/ontology/lint");
+    if (!r.configured) { showOntologyReport("Configure e salve a pasta da ontologia primeiro."); return; }
+    const head = `${r.notes} notas (${r.drafts} rascunhos); ${r.with_warnings.length} com avisos de STE-pt.`;
+    showOntologyReport([head, ...r.with_warnings.slice(0, 40).map((n) => `\n${n.path} [${n.status}]\n  - ${n.warnings.join("\n  - ")}`)].join("\n"));
+  } catch (err) {
+    showOntologyReport("Erro: " + err.message);
+  }
 }
 
 async function saveSettings(event) {
@@ -288,10 +428,12 @@ async function saveSettings(event) {
     user_name: f.user_name.value.trim(),
     azure: {
       board_url: f.board_url.value.trim(),
+      wiki_url: f.wiki_url.value.trim(),
       epic_active_columns: [...epicColumns.selected],
     },
     azure_mcp: { args: f.azure_mcp_dll.value.trim() ? [f.azure_mcp_dll.value.trim()] : [] },
     obsidian: { root_dir: f.obsidian_root.value.trim() },
+    ontology: { dir: f.ontology_dir.value.trim() },
     notion: { root_page: f.notion_root.value.trim() },
     agent: {
       skills_dir: f.skills_dir.value.trim(),
@@ -332,7 +474,7 @@ function showBoardInfo() {
 /* ---------- Toast ---------- */
 function showToast(html, isError = false) {
   const el = $("#toast");
-  el.innerHTML = html;
+  $("#toast-body").innerHTML = html;
   el.classList.toggle("error", isError);
   el.hidden = false;
   // O alerta fica no topo, e botões como "Criar card" ficam no fim da página: leva o usuário até ele.
@@ -429,7 +571,12 @@ function applyResult(result, replyText) {
   }
   $("#llm-comment").textContent = comment;
   editors.reply.setHTML("");
-  setMemoryNote(result.learnings_saved.length ? `🧠 Memória atualizada: ${result.learnings_saved.join(" · ")}` : "");
+  const notes = [];
+  if (result.learnings_saved.length) notes.push(`🧠 Memória atualizada: ${result.learnings_saved.join(" · ")}`);
+  if ((result.ontology_suggestions_saved || []).length) {
+    notes.push(`📚 Sugestão para a ontologia (rascunho a revisar): ${result.ontology_suggestions_saved.join(" · ")}`);
+  }
+  setMemoryNote(notes.join("\n"));
   $("#sec-iter").classList.remove("collapsed");   // o comentário precisa estar visível
 }
 
@@ -526,9 +673,19 @@ function bindEvents() {
   $("#btn-create").addEventListener("click", createCard);
   $("#new-story").addEventListener("click", newStory);
   $("#recent").addEventListener("click", (e) => {
+    const del = e.target.closest("button[data-del]");
+    if (del) {
+      deleteStory(del.dataset.del).catch((err) => showToast(escapeHtml(err.message), true));
+      return;
+    }
     const link = e.target.closest("a[data-id]");
     if (link) openStory(link.dataset.id);
   });
+  $("#btn-clear").addEventListener("click", clearCard);
+  $("#toast-close").addEventListener("click", hideToast);
+  $("#ontology-ingest").addEventListener("click", runOntologyIngest);
+  $("#ontology-lint").addEventListener("click", runOntologyLint);
+  $("#ontology-events").addEventListener("click", runEventsSync);
   $("#toggle-theme").addEventListener("click", () => {
     applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   });
@@ -543,11 +700,16 @@ function bindEvents() {
     $("#epic-columns").open = true;
   });
 
-  document.querySelectorAll(".collapse").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.getElementById(btn.dataset.target).classList.toggle("collapsed");
+  // Qualquer ponto do cabeçalho recolhe/expande a seção (o botão ⌄ está dentro dele).
+  document.querySelectorAll(".card.collapsible > .card-head").forEach((head) => {
+    const toggle = () => {
+      head.parentElement.classList.toggle("collapsed");
       alignCriteria();
       scheduleSave();
+    };
+    head.addEventListener("click", toggle);
+    head.addEventListener("keydown", (e) => {
+      if (e.target === head && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(); }
     });
   });
 
