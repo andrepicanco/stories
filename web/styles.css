@@ -109,9 +109,14 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; width: 100%
 .card h2 { margin: 0 0 14px; font-size: 26px; font-weight: 700; }
 .card-head { display: flex; justify-content: space-between; align-items: center; }
 .card-head h2 { margin: 0; }
-.collapse { background: none; border: 0; color: var(--text); font-size: 26px; cursor: pointer; transition: transform .15s; }
+/* Chevron fino como nos mockups (o mesmo nos dois estados), desenhado com bordas em vez de glifo */
+.collapse { position: relative; width: 30px; height: 30px; background: none; border: 0; color: var(--text); font-size: 0; cursor: pointer; }
+.collapse::before {
+  content: ""; position: absolute; left: 50%; top: 42%; width: 10px; height: 10px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
 .card.collapsed .card-body { display: none; }
-.card.collapsed .collapse { transform: rotate(180deg); }
 .card.collapsed .card-head { margin: 0; }
 .card:not(.collapsed) .card-head { margin-bottom: 14px; }
 

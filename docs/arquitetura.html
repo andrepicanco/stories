@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa do Stories</title>
+<style>
+:root{
+  --bg:#f4f1ea; --panel:#fffdf8; --ink:#1d2330; --muted:#5d6577; --line:#d9d3c5;
+  --zone:rgba(60,70,100,.06); --zone-line:rgba(60,70,100,.35);
+  --edge:#7a8296; --accent:#d9480f; --halo:#f4f1ea; --btn:#ece7da;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#151922; --panel:#1c212c; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2d3446;
+    --zone:rgba(160,175,220,.07); --zone-line:rgba(160,175,220,.35);
+    --edge:#8c95ab; --accent:#ff8a4c; --halo:#151922; --btn:#2a3142;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151922; --panel:#1c212c; --ink:#e8ebf2; --muted:#9aa3b5; --line:#2d3446;
+  --zone:rgba(160,175,220,.07); --zone-line:rgba(160,175,220,.35);
+  --edge:#8c95ab; --accent:#ff8a4c; --halo:#151922; --btn:#2a3142;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+header .sp{flex:1}
+header .grp{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+header .grp small{color:var(--muted)}
+button,.sw{font:inherit;color:var(--ink);background:var(--btn);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button:disabled{opacity:.45;cursor:default}
+.sw{display:inline-flex;align-items:center;gap:8px;user-select:none;padding:5px 10px}
+.sw .knob{width:34px;height:18px;border-radius:9px;background:#9aa0ad;position:relative;transition:.2s}
+.sw .knob::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s}
+.sw.on .knob{background:#2f9e44}.sw.on .knob::after{left:18px}
+main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 410px}
+#stage{position:relative;overflow:hidden;cursor:grab;touch-action:none}
+#stage.drag{cursor:grabbing}
+svg{width:100%;height:100%;display:block}
+aside{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:16px 18px}
+aside h2{font-size:18px;margin:0 0 2px}
+aside h3{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:16px 0 4px}
+aside p{margin:4px 0}
+.file{display:inline-block;font:12px ui-monospace,Consolas,monospace;background:var(--btn);border-radius:5px;padding:1px 7px;color:var(--muted)}
+code{font:12.5px ui-monospace,Consolas,monospace;background:var(--btn);border-radius:4px;padding:0 4px}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font:12px/1.45 ui-monospace,Consolas,monospace;overflow:auto;white-space:pre}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{padding:2px 10px;font-size:13px}
+#tour{border:2px solid var(--accent);border-radius:10px;padding:10px 12px;margin-bottom:14px;display:none}
+#tour .n{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.6px}
+#tour h2{font-size:16px}
+#tour .nav{display:flex;gap:8px;margin-top:8px}
+.hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;max-width:calc(100% - 24px)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.zoom{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:34px;padding:4px 0}
+/* svg */
+.node{cursor:pointer;transition:opacity .25s}
+.node:hover .top{filter:brightness(1.07)}
+.node.sel{filter:drop-shadow(0 0 7px var(--accent))}
+.node.dim,.edge.dim,.elabel.dim{opacity:.18}
+.node.off{opacity:.5}
+.edge path{fill:none;stroke:var(--edge);stroke-width:2.2;stroke-dasharray:7 6;animation:dash 1s linear infinite;transition:opacity .25s}
+.edge.act path{stroke:var(--accent);stroke-width:3.6}
+.edge.off path{stroke-dasharray:2 6;animation:none;opacity:.35}
+@keyframes dash{to{stroke-dashoffset:-13}}
+@media (prefers-reduced-motion:reduce){.edge path{animation:none}}
+.elabel{font-size:11px;fill:var(--muted);paint-order:stroke;stroke:var(--halo);stroke-width:4px;stroke-linejoin:round;pointer-events:none;transition:opacity .25s}
+.zlabel{font-size:12px;font-weight:700;letter-spacing:1px;fill:var(--muted);text-transform:uppercase}
+.t1{font-size:12.5px;font-weight:700;fill:#1d2330;pointer-events:none;text-anchor:middle}
+.t2{font:10.5px ui-monospace,Consolas,monospace;fill:#3b4357;pointer-events:none;text-anchor:middle}
+/* ?embed: só o mapa (usado para gerar a imagem do README) */
+body.embed header,body.embed aside,body.embed .hint,body.embed .zoom{display:none}
+body.embed main{grid-template-columns:1fr;grid-template-rows:1fr}
+@media (max-width:860px){
+  main{grid-template-columns:1fr;grid-template-rows:1fr 46vh}
+  aside{border-left:0;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗺️ Mapa do Stories</h1>
+  <button class="primary" id="btnTour">▶ Tour guiado</button>
+  <span class="grp">
+    <small>Fontes de contexto da tela:</small>
+    <span class="sw on" data-grp="notion" role="switch" aria-checked="true" tabindex="0" title="Checkbox Notion da tela"><span class="knob"></span><span>Notion</span></span>
+    <span class="sw on" data-grp="azure" role="switch" aria-checked="true" tabindex="0" title="Checkbox Azure DevOps da tela"><span class="knob"></span><span>Azure DevOps</span></span>
+    <span class="sw on" data-grp="obsidian" role="switch" aria-checked="true" tabindex="0" title="Checkbox Obsidian da tela"><span class="knob"></span><span>Obsidian</span></span>
+  </span>
+  <span class="sp"></span>
+  <button id="btnTheme" title="Alternar tema">◐</button>
+</header>
+<main>
+  <div id="stage">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg" aria-label="Mapa isométrico da arquitetura do Stories">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+          <path d="M0 0L10 5L0 10z" fill="context-stroke"/>
+        </marker>
+      </defs>
+      <g id="view"><g id="scene"></g></g>
+    </svg>
+    <div class="zoom"><button id="zin">+</button><button id="zout">−</button><button id="zfit" title="Ajustar">⤢</button></div>
+    <div class="hint">Arraste para mover · roda do mouse para zoom · clique nos blocos · ← → no tour</div>
+  </div>
+  <aside id="panel">
+    <div id="tour"></div>
+    <div id="detail"></div>
+  </aside>
+</main>
+
+<script>
+/* ============================================================
+   DADOS — blocos (nós), fluxos (arestas) e passos do tour
+   Coordenadas em "tiles" no chão; x vai p/ direita-baixo, y p/ esquerda-baixo.
+   grp = fonte de contexto (notion | azure | obsidian) que liga/desliga o bloco.
+   ============================================================ */
+const N = [
+ /* ---------- NAVEGADOR ---------- */
+ {id:'ui', name:'Tela', file:'web/app.js', icon:'🖥', x:0,y:4,w:3,d:3,h:1, hue:225,
+  kind:'Interface (navegador)',
+  what:'A página que você usa: escolhe tipo de card e épico, marca as fontes, escreve a descrição e clica em Gerar ✨, Responder ou Criar card. Guarda o estado da tela (textos, conversa, título editado) e o salva sozinho no histórico. Não fala com o modelo: só com a API.',
+  why:'Gerar leva de segundos a minutos. Por isso a tela não espera a resposta de uma vez: abre uma execução e a consulta a cada segundo, mostrando o andamento ("Notion: search · 3 consultas").',
+  code:'const job = await api(kind === "reply" ? "/api/reply" : "/api/generate",\n                      { method: "POST", body });\nconst result = await pollJob(job.id);   // GET /api/jobs/{id}, a cada 1 s\napplyResult(result, replyText);',
+  links:['editor','api','cfg']},
+ {id:'editor', name:'Editor', file:'web/editor.js', icon:'✍', x:0,y:9,w:3,d:2.5,h:0.8, hue:225,
+  kind:'Editor WYSIWYG (Tiptap)',
+  what:'Todas as caixas de texto são editores ricos, com atalhos no estilo do Notion: Ctrl+B negrito, Ctrl+I itálico, Ctrl+U sublinhado, Ctrl+K link, e markdown ao digitar ("# " vira título, "- " vira lista). Ctrl+Enter envia a resposta ao agente.',
+  why:'O Azure DevOps guarda os campos como HTML. Se o editor já produz HTML, o que você vê é o que será gravado no card. A biblioteca fica em web/vendor, então funciona sem internet.',
+  code:'import { StarterKit } from "/static/vendor/esm/@tiptap/starter-kit@3.31.4/es2022/starter-kit.mjs";\n// ...\ngetHTML: () => (editor.isEmpty ? "" : editor.getHTML()),  // vazio = "" (não "<p></p>")',
+  links:['ui']},
+ {id:'cfg', name:'Configurações', file:'config/ + .env', icon:'⚙', x:0,y:14,w:3,d:2.5,h:0.5, hue:215, sat:.2, disk:1,
+  kind:'Disco (configuração e segredos)',
+  what:'settings.json traz o padrão; settings.local.json guarda só o que você altera em ⚙️ (Board, colunas de épicos, pastas, prompt). O .env guarda os segredos: PAT do Azure DevOps e chaves do Azure OpenAI.',
+  why:'Separar padrão, escolhas pessoais e segredos evita vazar credenciais: .env e settings.local.json ficam fora do git. O .env vence variáveis antigas do Windows de mesmo nome.',
+  code:'def load_dotenv(path):\n    ...\n    os.environ[key.strip()] = value   # o .env vence o ambiente do sistema\n\n# Board é uma URL: organização, projeto, time e nível saem dela\nparse_board_url("https://dev.azure.com/Org/Projeto/_boards/board/t/Time/Stories")',
+  links:['api','ui']},
+
+ /* ---------- SERVIDOR ---------- */
+ {id:'api', name:'API', file:'server/main.py', icon:'🚪', x:6,y:4,w:4,d:3,h:1.2, hue:195,
+  kind:'Servidor (FastAPI)',
+  what:'A porta de entrada. Serve a página e expõe as rotas: épicos e filhos, configurações, status das conexões, histórico, iniciar execução (/api/generate e /api/reply), acompanhar (/api/jobs/{id}) e criar card (/api/cards). Também sobe as conexões MCP ao iniciar.',
+  why:'Concentra as regras de entrada em um só lugar: rejeita edição de história já criada, tipo de card inválido ou resposta vazia, antes de qualquer chamada cara.',
+  code:'@app.post("/api/generate")\ndef generate_card(body: RunIn) -> dict:\n    return _start_run(body, require_reply=False)   # devolve o job; a tela acompanha\n\n@app.get("/api/jobs/{job_id}")\ndef job_status(job_id: str): ...',
+  links:['ui','sanit','jobs','hist','cfg','azc']},
+ {id:'sanit', name:'Sanitizador', file:'html_sanitize.py', icon:'🧼', x:6,y:8.6,w:4,d:2,h:0.7, hue:2,
+  kind:'Segurança do HTML',
+  what:'Lista de permissão de tags (p, strong, ul, h2, a, table...). Remove scripts, estilos, eventos (onclick) e links perigosos (javascript:). Passa por aqui o HTML do editor, o HTML gerado pelo modelo e o que vai para o Azure.',
+  why:'O modelo e o usuário podem colar qualquer coisa. Sem isso, um texto malicioso poderia rodar na sua tela ou gravar HTML estranho no card.',
+  code:'ALLOWED = {"p", "br", "strong", "em", "u", "h2", "h3", "ul", "ol", "li", "a", "table", ...}\nDROP_WITH_CONTENT = {"script", "style", "iframe", "object", ...}\nSAFE_URL = re.compile(r"^(https?://|mailto:)", re.IGNORECASE)',
+  links:['api','cards','gen']},
+ {id:'cards', name:'Criar card', file:'server/cards.py', icon:'🎫', x:6,y:12,w:4,d:3,h:0.9, hue:195,
+  kind:'Validação + payload do Azure',
+  what:'Valida (título, texto, épico), confirma que os relacionados são filhos do épico, descobre os campos reais de cada tipo de card, monta o documento JSON Patch e só então envia. Campos que o tipo não tem (ex.: Spike sem "Repositórios Alterados") vão para o fim da descrição.',
+  why:'É o único lugar que cria algo no mundo real. Tudo é conferido antes e o modo "ensaio" (dry_run) monta o payload sem enviar. Quem cria é a tela, com sua confirmação: o agente de IA não tem essa ferramenta.',
+  code:'def prepare(ctx, settings, req, azure=azure_client) -> Prepared:\n    children = {c["id"] for c in azure.list_children(ctx, req.epic_id)}\n    # relacionados precisam ser filhos do épico escolhido\n    refs, missing = azure.resolve_field_refs(ctx, wit, cfg["fields"])\n    patch = azure.build_create_patch(ctx, title, default_area, values,\n                                     req.epic_id, related)',
+  links:['sanit','azc','hist']},
+ {id:'hist', name:'Histórico', file:'server/history.py', icon:'🗂', x:6,y:16.5,w:4,d:2.5,h:0.8, hue:195,
+  kind:'Persistência das histórias',
+  what:'Guarda cada história com o estado completo da tela (textos em HTML, conversa, tools marcadas) e o status: rascunho ou criada. É a lista "Recentes" da barra lateral e o que reabre a página exatamente como estava.',
+  why:'Persistente entre sessões. Depois que o card é criado, a história fica travada: o servidor ignora novas edições, então nem um clique atrasado do navegador a altera.',
+  code:'def save_draft(story_id, title, state):\n    current = get(story_id)\n    if current["status"] == "created":\n        return current              # travada: não aceita alterações\n    ...\ndef mark_created(story_id, card_id, card_url, title=None): ...',
+  links:['api','cards','hdb']},
+ {id:'hdb', name:'history.db', file:'storage/history.db', icon:'💾', x:6,y:20.5,w:4,d:2,h:0.4, hue:215, sat:.2, disk:1,
+  kind:'Disco (SQLite)',
+  what:'Uma tabela "stories": id, título, status, id e link do card criado, estado da tela (JSON) e datas.',
+  why:'Um arquivo simples basta para uso local. Abra com qualquer visualizador de SQLite para ver o que o agente e a tela gravaram.',
+  code:'CREATE TABLE stories (\n  id TEXT PRIMARY KEY, title TEXT NOT NULL,\n  status TEXT DEFAULT \'draft\',        -- draft | created\n  card_id INTEGER, card_url TEXT,\n  state TEXT DEFAULT \'{}\',            -- toda a tela, em JSON\n  created_at REAL, updated_at REAL)',
+  links:['hist']},
+ {id:'azc', name:'Cliente Azure', file:'azure_client.py', icon:'🔗', x:6,y:24.4,w:4,d:2.4,h:0.8, hue:175,
+  kind:'Integração (API REST)',
+  what:'Fala direto com a API do Azure DevOps usando o PAT: lista as colunas do board de Épicos, os épicos ativos (WIQL), os filhos de cada épico, descobre os campos de cada tipo de card e cria o work item (JSON Patch).',
+  why:'Um único cliente atende a tela (épicos), o agente (leitura de cards) e a criação do card. Os nomes dos campos vêm do próprio Azure, não ficam fixos no código.',
+  code:'def _auth_header():\n    return "Basic " + base64.b64encode(f":{pat}".encode()).decode()   # PAT\n\n# criar: POST .../_apis/wit/workitems/$Technical%20Story  (json-patch+json)\n{"op": "add", "path": "/relations/-",\n "value": {"rel": "System.LinkTypes.Hierarchy-Reverse", "url": ".../workItems/267048"}}',
+  links:['api','cards','tazr','azdo']},
+
+ /* ---------- AGENTE ---------- */
+ {id:'jobs', name:'Execuções', file:'server/jobs.py', icon:'⏱', x:13,y:4,w:3,d:3,h:0.8, hue:195,
+  kind:'Tarefas em segundo plano',
+  what:'Roda o agente numa thread e guarda o andamento: cada ferramenta que o agente chama vira um passo que a tela consulta. Ao final, guarda o resultado ou o erro.',
+  why:'A requisição HTTP volta na hora e a tela mostra o progresso. Tudo fica em memória: se o servidor for reiniciado durante uma geração, a execução se perde (a tela avisa).',
+  code:'def start(self, work):\n    job = Job(id=uuid.uuid4().hex)\n    def runner():\n        try:   job.result = work(lambda step: job.steps.append(step)); job.status = "done"\n        except Exception as err: job.error = str(err); job.status = "error"\n    threading.Thread(target=runner, daemon=True).start()',
+  links:['api','gen']},
+ {id:'gen', name:'Geração', file:'agent/generation.py', icon:'📝', x:18,y:4,w:4,d:3,h:1, hue:268,
+  kind:'Tarefa + contrato de saída',
+  what:'Monta a tarefa a partir da tela (tipo, épico, relacionados, descrição, textos atuais, conversa e sua resposta) e exige que o modelo responda em JSON: modo "draft" ou "questions" (até 2 perguntas), título, os três textos em HTML, comentário e feedback. Valida a resposta e, se vier inválida, pede uma única correção.',
+  why:'Sem contrato, cada resposta teria um formato. Com ele, a tela sabe exatamente onde colocar cada texto, e o feedback do usuário vira aprendizado de memória.',
+  code:'OUTPUT_CONTRACT = """## Formato da resposta (obrigatório)\n{"mode": "draft" | "questions", "title": "...", "card_html": "...",\n "impacted_resources_html": "...", "acceptance_criteria_html": "...",\n "comment": "...", "questions": [...],\n "feedback": {"sentiment": "...", "learnings": [...]}}"""\n\nsaved = [f for f in parsed["learnings"] if inp.reply.strip() and memory.add(f)]',
+  links:['jobs','harness','sanit','memory']},
+ {id:'onto', name:'Ontologia', file:'agent/ontology.py', icon:'🧬', x:13,y:9.2,w:3,d:2.4,h:0.8, hue:2,
+  kind:'Tipos + efeitos das ferramentas',
+  what:'O vocabulário que o harness usa para validar. Tipos com herança (WorkItemId é um Inteiro; Query é um Texto) e efeitos: READ, WRITE_MEMORY e WRITE_WORLD. Cada argumento de ferramenta declara seu tipo e é validado antes de executar. Só WRITE_WORLD exigiria aprovação humana.',
+  why:'Se o modelo pedir o card "abc" ou um caminho "../../segredo", o erro é barrado cedo e devolvido ao modelo para ele se corrigir. A edição da ontologia pelo usuário fica para uma versão futura.',
+  code:'TYPES = {"Text": (None, _text), "Query": ("Text", _query),\n         "Path": ("Text", _path),\n         "Inteiro": ("Number", _integer), "WorkItemId": ("Inteiro", _workitem_id)}\nNEEDS_APPROVAL = {Effect.WRITE_WORLD}',
+  links:['harness','registry']},
+ {id:'harness', name:'HARNESS', file:'agent/harness/loop.py', icon:'⚙', x:17.5,y:9,w:4.5,d:4,h:1.8, hue:268,
+  kind:'Orquestração — o coração',
+  what:'O loop que une tudo: manda o prompt e as ferramentas ao modelo, executa as que ele pedir, devolve os resultados e repete até vir uma resposta final. O modelo só PEDE ações; quem valida e executa é o harness, com limites de passos e de tamanho de saída.',
+  why:'Um agente não é o modelo: é o modelo dentro de um harness. Aqui moram a segurança, o controle de custo (máximo de passos) e o tratamento de erros: um erro vira texto para o modelo tentar de novo, não derruba a execução.',
+  code:'for _ in range(max_steps):\n    msg = llm.chat(convo, specs)\n    if not msg.tool_calls:                  # terminou\n        result.text = msg.content; return result\n    for call in msg.tool_calls:             # pediu ferramentas\n        output, is_error = _execute(registry, call.function.name, raw, approve, max_tool_output)\n# limite de passos: última chamada SEM tools força uma resposta\nresult.text = llm.chat(convo, []).content',
+  links:['gen','llm','registry','skills','memory','onto']},
+ {id:'llm', name:'Cliente LLM', file:'agent/llm.py', icon:'🔌', x:24,y:9.4,w:3,d:3,h:0.8, hue:28,
+  kind:'Adaptador do modelo',
+  what:'Um wrapper fino com uma função: chat(mensagens, ferramentas). Lê as credenciais do .env e chama o Azure OpenAI.',
+  why:'Isola o provedor. Trocar de modelo ou de nuvem é mexer só neste arquivo; o harness não sabe quem está do outro lado.',
+  code:'self.client = AzureOpenAI(azure_endpoint=endpoint, api_key=..., api_version=...)\n\ndef chat(self, messages, tools):\n    kwargs = {"model": self.deployment, "messages": messages}\n    if tools: kwargs["tools"] = tools\n    return self.client.chat.completions.create(**kwargs).choices[0].message',
+  links:['harness','openai']},
+ {id:'registry', name:'Ferramentas', file:'registry.py + base.py', icon:'🧰', x:13.5,y:15.5,w:4,d:3,h:0.8, hue:140,
+  kind:'Registro e lista de permissão',
+  what:'Descobre as ferramentas: cada .py de agent/tools/ exporta get_tools(). Cada ferramenta tem nome, descrição, argumentos tipados (ou JSON Schema bruto, vindo de MCP), efeito e um grupo (notion, azure, obsidian). Os checkboxes da tela definem quais grupos entram.',
+  why:'É a lista de permissão por execução: desmarcou "Obsidian", o modelo nem sabe que essas ferramentas existem. Um módulo com erro vira aviso e não derruba os outros.',
+  code:'def filter_tools(tools, enabled_groups):\n    allowed = set(enabled_groups) | {CORE}      # core (load_skill) sempre\n    return [t for t in tools if t.group in allowed]\n\n# agent/tools/obsidian.py\ndef get_tools(ctx: ToolContext) -> list[Tool]: ...',
+  links:['harness','onto','tobs','tazr','mcp','skills']},
+ {id:'skills', name:'Skills', file:'agent/skills/*/SKILL.md', icon:'📚', x:19,y:15.5,w:3,d:3,h:0.8, hue:320,
+  kind:'Instruções de escrita sob demanda',
+  what:'Uma pasta por skill, com um SKILL.md (nome e descrição no cabeçalho). Hoje: user-story-writer-cobranca (formato dos cards) e notion-navigator-cobranca (onde achar contexto). O prompt leva só o índice; o texto completo entra quando o agente chama load_skill.',
+  why:'Skills longas custariam contexto em toda execução. Assim o agente lê só a que precisa. O diretório de skills é configurável em ⚙️.',
+  code:'## Skills disponíveis\nChame `load_skill(name)` para ler as instruções completas ANTES de aplicar uma skill.\n- **user-story-writer-cobranca**: Use esta skill sempre que ... criar histórias ...\n\n# agent/skills/<nome>/SKILL.md\n---\nname: user-story-writer-cobranca\ndescription: "..."\n---',
+  links:['harness','registry']},
+ {id:'memory', name:'Memória', file:'agent/memory.py', icon:'📒', x:23.5,y:15.5,w:3,d:3,h:0.8, hue:45,
+  kind:'Memória de longo prazo',
+  what:'Lista de aprendizados curtos sobre como você quer os textos ("Escreva critérios de aceite objetivos e testáveis"). É lida a cada execução e entra no prompt. É alimentada pelo feedback que você dá em Responder: até 2 aprendizados por resposta, sem duplicados.',
+  why:'Sem isso o agente repetiria os mesmos erros a cada história. Hoje é a estratégia mais simples (lista no prompt); quem decide o que vira memória é o modelo.',
+  code:'def add(self, fact):\n    fact = " ".join(fact.split())\n    if fact.casefold() in {f.casefold() for f in self.facts()}:\n        return False                         # sem duplicados\n    ...\ndef prompt_block(self):\n    return "## Memória (aprendizados de histórias anteriores)\\n" + "\\n".join(f"- {f}" ...)',
+  links:['harness','gen','memjson']},
+ {id:'memjson', name:'memory.json', file:'storage/memory.json', icon:'💾', x:24,y:19.6,w:3,d:2,h:0.4, hue:215, sat:.2, disk:1,
+  kind:'Disco (persistência)',
+  what:'Um array JSON de strings. Só é criado quando o primeiro aprendizado é gravado.',
+  why:'Sobrevive ao fim do processo: é isso que torna a memória persistente entre sessões. Pode ser editado à mão.',
+  code:'["Escreva critérios de aceite objetivos e testáveis",\n "Prefira textos curtos e diretos"]',
+  links:['memory']},
+ {id:'tobs', name:'Obsidian', file:'tools/obsidian.py', icon:'🔮', x:12.8,y:21,w:3,d:2.3,h:0.6, hue:140, small:1, grp:'obsidian',
+  kind:'Ferramentas de leitura (disco)',
+  what:'obsidian_list, obsidian_search (ignora acentos e caixa) e obsidian_read (notas longas em partes). Só arquivos .md, só dentro da pasta raiz configurada em ⚙️; pastas ocultas (.obsidian) e tentativas de sair da raiz são bloqueadas.',
+  why:'Dar ao modelo acesso a arquivos pede uma cerca: o caminho é resolvido e conferido antes de qualquer leitura. Sem pasta raiz configurada, nenhuma ferramenta é criada.',
+  code:'def resolve(self, rel):\n    target = (self.root / rel).resolve()\n    if not target.is_relative_to(self.root):\n        raise ValueError("caminho fora da pasta raiz do Obsidian")\n    if any(p.startswith(".") for p in target.relative_to(self.root).parts):\n        raise ValueError("pastas e arquivos ocultos não são acessíveis")',
+  links:['registry','vault']},
+ {id:'tazr', name:'Cards (REST)', file:'tools/azure_rest.py', icon:'🪪', x:16.8,y:21,w:3,d:2.3,h:0.6, hue:140, small:1, grp:'azure',
+  kind:'Ferramentas de leitura (API)',
+  what:'azure_get_work_item (descrição, critérios, recursos impactados e links), azure_list_epic_children e azure_search_work_items. O HTML dos campos é convertido em texto para o modelo ler sem ruído.',
+  why:'Trazem o que o MCP não traz (campo de recursos impactados e os links), então convivem com ele. As duas ferramentas do MCP que repetiriam estas ficam ocultas, para o modelo não escolher entre duas iguais.',
+  code:'Tool(name="azure_get_work_item",\n     description="Lê um card do Azure DevOps pelo ID ...",\n     inputs={"id": Param("WorkItemId", "ID numérico do work item")},\n     fn=lambda id: _describe(board, az.get_work_item(board, id)),\n     effect=Effect.READ, group="azure")',
+  links:['registry','azc']},
+ {id:'mcp', name:'Ponte MCP', file:'agent/mcp_bridge.py', icon:'🌉', x:20.8,y:21,w:3.2,d:2.5,h:0.8, hue:140,
+  kind:'Conexões MCP persistentes',
+  what:'Mantém, em segundo plano, a conexão com o Azure Boards MCP (processo .NET via stdio) e com o Notion (HTTP remoto, token renovado sozinho). Converte as ferramentas desses servidores em ferramentas do harness. As conexões sobem quando o servidor inicia e o status aparece na barra lateral.',
+  why:'O SDK do MCP é assíncrono e o harness é síncrono: um loop em thread própria faz a ponte. Só ferramentas de LEITURA chegam ao agente: criar/editar páginas ou cards pelo MCP nunca fica ao alcance do modelo.',
+  code:'if t.name in spec.hidden_names or (spec.only_names is not None\n                                   and t.name not in spec.only_names):\n    continue\nread_only = getattr(ann, "read_only_hint", None)\nif not read_only:\n    continue                 # escritas nunca chegam ao agente',
+  links:['registry','mcpaz','notion']},
+
+ /* ---------- EXTERNOS ---------- */
+ {id:'openai', name:'Azure OpenAI', file:'seu deployment', icon:'☁', x:30,y:9.4,w:3,d:3,h:1, hue:28, sat:1.15,
+  kind:'Serviço externo (nuvem)',
+  what:'O modelo de linguagem. Recebe as mensagens e a descrição das ferramentas e devolve OU texto OU um pedido de ferramenta. Não executa nada nem guarda nada entre chamadas: tudo o que ele sabe da sua história é o que o harness colocar no prompt.',
+  why:'É o cérebro: raciocina e decide o próximo passo. Por isso o contexto que você dá (descrição, fontes, memória, skills) define a qualidade do card.',
+  code:'# pedido de ferramenta (simplificado):\n{"role": "assistant", "content": null,\n "tool_calls": [{"id": "call_1", "function": {\n   "name": "notion__notion-search",\n   "arguments": "{\\"query\\": \\"rollback feature flag\\"}"}}]}',
+  links:['llm']},
+ {id:'azdo', name:'Azure DevOps', file:'board + work items', icon:'📋', x:30,y:15.2,w:3.5,d:3.4,h:1, hue:215, sat:1.1,
+  kind:'Serviço externo (nuvem)',
+  what:'Onde ficam os épicos, os cards e o board. A ferramenta lê épicos e filhos e, no fim, cria o card com os campos em HTML, o épico como pai e os cards marcados como Related.',
+  why:'É a fonte da verdade do trabalho do time. O PAT usado precisa de leitura e escrita em Work Items.',
+  code:'[{"op": "add", "path": "/fields/System.Title", "value": "[RENEG] ..."},\n {"op": "add", "path": "/fields/System.AreaPath", "value": "Projeto\\\\Time"},\n {"op": "add", "path": "/fields/System.Description", "value": "<h2>Contexto</h2>..."},\n {"op": "add", "path": "/relations/-", "value": {"rel": "System.LinkTypes.Related", "url": "..."}}]',
+  links:['azc','mcpaz']},
+ {id:'mcpaz', name:'Azure Boards MCP', file:'.NET · stdio', icon:'🧩', x:30,y:20.5,w:3.5,d:2.5,h:0.8, hue:250, grp:'azure',
+  kind:'Servidor MCP local (.NET)',
+  what:'O repositório azure-boards-mcp, compilado e executado como um processo filho. Oferece histórico do card, relações, busca por responsável e relatórios do board. A ferramenta de escrita (create_subtask) é descartada pela ponte.',
+  why:'Reaproveita ferramentas já prontas e testadas. O caminho do .dll é configurado em ⚙️ e o processo encerra junto com o servidor do Stories.',
+  code:'# a ponte inicia (stdio):\ndotnet AzureBoardsMcp.Server.dll\n# com o ambiente: AZDO_ORG_URL, AZDO_PROJECT, AZDO_PAT\n\n# ferramentas expostas ao agente (leitura):\nget_work_item_history, get_work_item_with_relations,\nsearch_work_items_by_assignee, list_board_work_items, get_board_report ...',
+  links:['mcp','azdo']},
+ {id:'notion', name:'Notion', file:'mcp.notion.com', icon:'📓', x:30,y:24.2,w:3.5,d:2.6,h:1, hue:0, sat:.12, grp:'notion',
+  kind:'Serviço externo (MCP remoto)',
+  what:'O Notion do time, acessado pelo MCP remoto oficial. Na primeira vez, você autoriza no navegador (OAuth); depois o token é renovado automaticamente. O agente recebe só 7 ferramentas de busca e leitura (search, fetch, comentários, bancos de dados, reuniões, times e usuários).',
+  why:'O servidor oferece ~26 ferramentas, a maioria irrelevante aqui. Reduzir a lista economiza contexto e evita que o modelo se perca. A página raiz do projeto, definida em ⚙️, é indicada ao modelo para focar as buscas.',
+  code:'NOTION_TOOLS = frozenset({"notion-search", "notion-fetch", "notion-get-comments",\n    "notion-query-data-sources", "notion-query-meeting-notes",\n    "notion-get-teams", "notion-get-users"})\n\n# token válido a cada requisição (renova com o refresh token)\nrequest.headers["Authorization"] = f"Bearer {token_provider()}"',
+  links:['mcp']},
+ {id:'vault', name:'Vault Obsidian', file:'pasta local de notas', icon:'🗃', x:13,y:27.3,w:4,d:2,h:0.4, hue:215, sat:.2, disk:1, grp:'obsidian',
+  kind:'Disco (suas anotações)',
+  what:'A pasta do Obsidian que você indica em ⚙️. O agente só lê arquivos .md dentro dela.',
+  why:'Anotações pessoais costumam ter o contexto que não está em nenhum sistema (reuniões, dúvidas, decisões).',
+  code:'Projetos/Reunião Gestão de Contratos.md\n  L2: - Repactuação pode criar registros na ZFT_EMPRESTIMOS ...',
+  links:['tobs']},
+];
+const NB = Object.fromEntries(N.map(n=>[n.id,n]));
+
+// arestas: pontos no chão. both = seta nas duas pontas. grp = fonte de contexto que a liga/desliga
+const E = [
+ {id:'e_ui_api', pts:[[3,4.9],[6,4.9]], label:'/api/*', lp:[4.5,4.1]},
+ {id:'e_api_ui', pts:[[6,5.9],[3,5.9]]},
+ {id:'e_ed_ui', pts:[[1.5,9],[1.5,7]], both:1},
+ {id:'e_api_cfg', pts:[[6,7.6],[4.2,7.6],[4.2,15.2],[3,15.2]]},
+ {id:'e_api_azc', pts:[[6,6.6],[5.2,6.6],[5.2,25],[6,25]], label:'épicos e filhos', lp:[5.2,17]},
+ {id:'e_cards_azc', pts:[[6,14],[5.2,14]]},
+ {id:'e_api_san', pts:[[8,7],[8,8.6]]},
+ {id:'e_san_cards', pts:[[8,10.6],[8,12]]},
+ {id:'e_cards_hist', pts:[[8,15],[8,16.5]], label:'trava', lp:[9.1,15.8]},
+ {id:'e_hist_db', pts:[[8,19],[8,20.5]], both:1},
+ {id:'e_api_hist', pts:[[10,6.8],[11.2,6.8],[11.2,17.7],[10,17.7]], both:1, label:'rascunhos', lp:[11.2,12.5]},
+ {id:'e_api_jobs', pts:[[10,4.9],[13,4.9]], label:'iniciar', lp:[11.5,4.1]},
+ {id:'e_jobs_api', pts:[[13,5.9],[10,5.9]], label:'andamento', lp:[11.5,6.5]},
+ {id:'e_jobs_gen', pts:[[16,5.5],[18,5.5]]},
+ {id:'e_gen_h', pts:[[20,7],[20,9]]},
+ {id:'e_h_gen', pts:[[21,9],[21,7]]},
+ {id:'e_onto', pts:[[16,10.4],[17.5,10.4]]},
+ {id:'e_h_llm', pts:[[22,10.2],[24,10.2]], label:'mensagens + tools', lp:[23,9.3]},
+ {id:'e_llm_h', pts:[[24,11.6],[22,11.6]], label:'tool_call | texto', lp:[23,12.5]},
+ {id:'e_llm_oa', pts:[[27,10.2],[30,10.2]], label:'HTTPS', lp:[28.5,9.3]},
+ {id:'e_oa_llm', pts:[[30,11.6],[27,11.6]]},
+ {id:'e_h_reg', pts:[[19,13],[19,14.2],[16,14.2],[16,15.5]], label:'tool_call', lp:[17.4,14.2]},
+ {id:'e_sk_h', pts:[[20,15.5],[20,13]], label:'índice', lp:[20.9,14.7]},
+ {id:'e_mem_h', pts:[[24,15.5],[24,14],[21.4,14],[21.4,13]], label:'fatos no prompt', lp:[23.2,14]},
+ {id:'e_mem_json', pts:[[25.5,18.5],[25.5,19.6]], both:1},
+ {id:'e_gen_mem', pts:[[22,5.5],[28,5.5],[28,16.5],[26.5,16.5]], label:'aprendizados (feedback)', lp:[28,4.7]},
+ {id:'e_reg_tobs', pts:[[14.2,18.5],[14.2,21]], grp:'obsidian'},
+ {id:'e_reg_tazr', pts:[[17.2,18.5],[17.2,21]], grp:'azure'},
+ {id:'e_reg_mcp', pts:[[16,18.5],[16,19.7],[21.5,19.7],[21.5,21]]},
+ {id:'e_tobs_vault', pts:[[14.5,23.3],[14.5,27.3]], grp:'obsidian', label:'lê .md', lp:[15.5,24]},
+ {id:'e_tazr_azc', pts:[[18,23.3],[18,26],[10,26]], grp:'azure', label:'REST', lp:[14,26]},
+ {id:'e_azc_azdo', pts:[[10,25.3],[28.5,25.3],[28.5,17.2],[30,17.2]], both:1, label:'HTTPS + PAT', lp:[25,25.3]},
+ {id:'e_mcp_mcpaz', pts:[[24,22.2],[30,22.2]], grp:'azure', label:'stdio', lp:[27,22.2]},
+ {id:'e_mcpaz_azdo', pts:[[31.7,20.5],[31.7,18.6]], grp:'azure'},
+ {id:'e_mcp_notion', pts:[[22.5,23.5],[22.5,26.2],[30,26.2]], grp:'notion', label:'HTTPS + OAuth', lp:[26.5,26.2]},
+];
+
+const STEPS = [
+ {t:'Você descreve o card', nodes:['ui','editor','cfg'], edges:['e_ed_ui'],
+  x:()=>'Na tela você escolhe o tipo de card (User Story, Technical Story ou Spike), o épico e as fontes de contexto, e escreve a descrição no editor rico. O Board vem das configurações. Ao escolher o épico, a tela já lista os cards filhos para você marcar os relacionados.'},
+ {t:'A API inicia uma execução', nodes:['ui','api','sanit','jobs'], edges:['e_ui_api','e_api_san','e_api_jobs'],
+  x:()=>'Gerar ✨ envia o estado da tela. A API valida (história não criada, tipo válido, descrição preenchida), limpa o HTML e abre uma execução em segundo plano. A tela recebe o número da execução e passa a consultar o andamento.'},
+ {t:'A tarefa e o contrato são montados', nodes:['jobs','gen'], edges:['e_jobs_gen'],
+  x:()=>'A geração transforma a tela em uma tarefa clara para o modelo e acrescenta o contrato de saída: ele precisa responder em JSON, com título, os três textos em HTML e um comentário. Se faltar informação essencial, pode devolver até 2 perguntas em vez do texto.'},
+ {t:'O harness monta o prompt', nodes:['gen','harness','skills','memory','memjson'], edges:['e_gen_h','e_sk_h','e_mem_h'],
+  x:()=>'O prompt junta: a persona (editável em ⚙️), as regras fixas (não inventar fatos), as fontes habilitadas, o índice de skills e a memória de aprendizados. As skills completas só entram se o modelo pedir (load_skill).'},
+ {t:'O modelo decide o próximo passo', nodes:['harness','llm','openai'], edges:['e_h_llm','e_llm_oa','e_oa_llm','e_llm_h'],
+  x:()=>'O harness envia ao Azure OpenAI o prompt e a descrição das ferramentas liberadas. O modelo não executa nada: devolve ou o texto final ou um pedido ("quero chamar notion-search com esta busca").'},
+ {t:'Validação e permissão', nodes:['harness','onto','registry'], edges:['e_onto','e_h_reg'],
+  x:g=>'Antes de executar, o harness confere: a ferramenta existe? Está no grupo liberado pelos checkboxes? Os argumentos respeitam a ontologia de tipos? Erros viram texto para o modelo se corrigir. '+(g.notion&&g.azure&&g.obsidian?'':'Fontes desmarcadas na tela nem aparecem para o modelo.')},
+ {t:'Consulta às fontes de contexto', nodes:['registry','tobs','tazr','mcp','vault','azc','azdo','mcpaz','notion'], edges:['e_reg_tobs','e_reg_tazr','e_reg_mcp','e_tobs_vault','e_tazr_azc','e_azc_azdo','e_mcp_mcpaz','e_mcpaz_azdo','e_mcp_notion'],
+  x:g=>'As ferramentas leem o Notion (busca e leitura de páginas), os cards do Azure DevOps (REST e MCP) e as notas do Obsidian. Só leitura. '+(g.notion&&g.azure&&g.obsidian?'Cada resultado volta ao modelo, que decide se precisa de mais consultas (até o limite de passos).':'Os blocos esmaecidos são fontes que você desmarcou: ficam de fora desta execução.')},
+ {t:'A resposta estruturada volta', nodes:['harness','gen','sanit','jobs','api','ui','editor'], edges:['e_h_gen','e_jobs_api','e_api_ui','e_ed_ui'],
+  x:()=>'Sem mais pedidos de ferramenta, o modelo entrega o JSON. A geração valida, limpa o HTML e devolve o resultado. A tela preenche Texto do card, Recursos e Critérios, o comentário em "Iteração e Refinamento" e o título (se você ainda não o tinha editado).'},
+ {t:'Responder e aprender', nodes:['ui','gen','memory','memjson'], edges:['e_ui_api','e_gen_mem','e_mem_json'],
+  x:()=>'Você ajusta qualquer texto e responde. Os três textos (com as suas edições) voltam junto com a conversa e a resposta. Um pedido de alteração gera nova versão; um elogio ou crítica pode virar aprendizado em memory.json, usado nas próximas histórias. O ciclo pode se repetir quantas vezes quiser.'},
+ {t:'Criar card', nodes:['ui','api','sanit','cards','azc','azdo','hist','hdb'], edges:['e_ui_api','e_api_san','e_san_cards','e_cards_azc','e_azc_azdo','e_cards_hist','e_hist_db'],
+  x:()=>'Criar card valida tudo (título, texto, épico, relacionados são filhos do épico), descobre os campos reais do tipo e envia: descrição, critérios e recursos em HTML, o épico como pai e os marcados como Related. O Azure devolve o número do card, a tela mostra o alerta com o link e a história fica travada e salva no histórico.'},
+];
+
+/* ============================================================
+   ESTADO + PROJEÇÃO ISOMÉTRICA
+   ============================================================ */
+const S=26, CX=Math.cos(Math.PI/6);
+const P=(x,y,z=0)=>[(x-y)*CX*S, (x+y)*.5*S - z*S];
+const pts=a=>a.map(p=>p.join(',')).join(' ');
+const st={grp:{notion:true,azure:true,obsidian:true}, sel:null, step:-1};
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs={},parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+
+const ZONES=[
+ {n:'Navegador  ·  web/', x0:-1,y0:3,x1:3.8,y1:12.6},
+ {n:'Disco  ·  configuração', x0:-1,y0:13.2,x1:3.8,y1:17.2},
+ {n:'Servidor  ·  server/ + integrations/', x0:5.5,y0:3,x1:12,y1:27.4},
+ {n:'Agente  ·  agent/', x0:12.4,y0:3,x1:28.4,y1:24.4},
+ {n:'Disco  ·  Obsidian', x0:12.4,y0:26.8,x1:17.9,y1:30.2},
+ {n:'Nuvem  ·  Azure OpenAI', x0:29.3,y0:8.4,x1:34.4,y1:13.6,r:1},
+ {n:'Nuvem  ·  Azure DevOps', x0:29.3,y0:14.4,x1:35,y1:19.3,r:1},
+ {n:'Processo local  ·  .NET', x0:29.3,y0:19.8,x1:35,y1:23.5,r:1},
+ {n:'Nuvem  ·  Notion', x0:29.3,y0:23.8,x1:35,y1:27.8,r:1},
+];
+
+const isOff=o=>o.grp && !st.grp[o.grp];
+
+/* ============================================================
+   DESENHO
+   ============================================================ */
+const scene=document.getElementById('scene');
+function activeSet(){
+  if(st.step<0)return null;
+  const s=STEPS[st.step];
+  return {nodes:new Set(s.nodes),edges:new Set(s.edges)};
+}
+function draw(){
+  scene.replaceChildren();
+  const act=activeSet();
+
+  for(const z of ZONES){
+    el('polygon',{points:pts([P(z.x0,z.y0),P(z.x1,z.y0),P(z.x1,z.y1),P(z.x0,z.y1)]),fill:'var(--zone)',stroke:'var(--zone-line)','stroke-dasharray':'6 5','stroke-width':1.5},scene);
+    const [lx,ly]=z.r?P(z.x1,z.y0):P(z.x0,z.y1);
+    const t=el('text',{x:z.r?lx+10:lx-10,y:ly+4,class:'zlabel','text-anchor':z.r?'start':'end'},scene);t.textContent=z.n;
+  }
+  const labels=[];
+  for(const e of E){
+    const off=isOff(e);
+    const g=el('g',{class:'edge'+(off?' off':'')+(act&&act.edges.has(e.id)&&!off?' act':'')+(act&&!act.edges.has(e.id)?' dim':'')},scene);
+    el('path',{d:'M'+e.pts.map(p=>P(...p).join(',')).join('L'),'marker-end':'url(#arr)','marker-start':e.both?'url(#arr)':'none'},g);
+    if(e.label){
+      const lp=e.lp||[(e.pts[0][0]+e.pts[e.pts.length-1][0])/2,(e.pts[0][1]+e.pts[e.pts.length-1][1])/2];
+      labels.push({e,lp,off,dim:act&&!act.edges.has(e.id)});
+    }
+  }
+  const order=[...N].sort((a,b)=>(a.x+a.w+a.y+a.d)-(b.x+b.w+b.y+b.d));
+  for(const n of order){
+    const off=isOff(n);
+    const dim=act&&!act.nodes.has(n.id);
+    const cls='node'+(off?' off':'')+(dim?' dim':'')+(st.sel===n.id?' sel':'');
+    const g=el('g',{class:cls,'data-id':n.id},scene);
+    const sat=off?6:Math.round(58*(n.sat??1)), h=n.hue;
+    let top=`hsl(${h},${sat}%,${n.disk?84:87}%)`, left=`hsl(${h},${Math.round(sat*.85)}%,${n.disk?66:70}%)`, right=`hsl(${h},${Math.round(sat*.8)}%,${n.disk?55:58}%)`;
+    const {x,y,w,d,h:H}=n, stroke=`hsl(${h},30%,32%)`;
+    el('polygon',{points:pts([P(x,y+d,H),P(x+w,y+d,H),P(x+w,y+d,0),P(x,y+d,0)]),fill:left,stroke,'stroke-width':.8},g);
+    el('polygon',{points:pts([P(x+w,y,H),P(x+w,y+d,H),P(x+w,y+d,0),P(x+w,y,0)]),fill:right,stroke,'stroke-width':.8},g);
+    el('polygon',{class:'top',points:pts([P(x,y,H),P(x+w,y,H),P(x+w,y+d,H),P(x,y+d,H)]),fill:top,stroke,'stroke-width':.8},g);
+    const [cx,cy]=P(x+w/2,y+d/2,H);
+    const big=n.id==='harness';
+    const t1=el('text',{x:cx,y:cy-(n.small?1:3),class:'t1',style:big?'font-size:16px':n.small?'font-size:11px':''},g);t1.textContent=n.icon+' '+n.name;
+    const t2=el('text',{x:cx,y:cy+(n.small?11:13),class:'t2',style:n.small?'font-size:9.5px':''},g);t2.textContent=n.file.length>24?n.file.slice(0,23)+'…':n.file;
+    g.addEventListener('click',()=>{ if(!moved) select(n.id); });
+  }
+  for(const l of labels){
+    const [x,y]=P(...l.lp);
+    const t=el('text',{x,y:y-4,class:'elabel'+(l.dim?' dim':''),'text-anchor':'middle'},scene);
+    t.textContent=l.e.label;
+    if(l.off)t.setAttribute('opacity','.35');
+  }
+}
+
+/* ============================================================
+   PAINEL
+   ============================================================ */
+const detail=document.getElementById('detail'), tourBox=document.getElementById('tour');
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+const GRP_LABEL={notion:'Notion',azure:'Azure DevOps',obsidian:'Obsidian'};
+function renderDetail(){
+  const n=st.sel&&NB[st.sel];
+  if(!n){
+    detail.innerHTML=`
+    <h2>Como ler este mapa</h2>
+    <p>O <b>Stories</b> transforma uma descrição breve em um card pronto no Azure DevOps. Um <b>agente de IA</b> pesquisa o contexto (Notion, cards do Azure, suas anotações), escreve o texto e você refina em uma conversa. Cinco ideias:</p>
+    <h3>As peças</h3>
+    <p>🖥 <b>Tela</b> — onde você trabalha, no navegador.<br>
+       🚪 <b>Servidor</b> — recebe pedidos, guarda o histórico e cria o card.<br>
+       ⚙ <b>Harness</b> — o loop do agente: pede ao modelo, executa ferramentas, repete.<br>
+       🧰 <b>Ferramentas</b> — as "mãos": só leitura do Notion, Azure e Obsidian.<br>
+       📒 <b>Memória e skills</b> — o que o agente aprende com você e as instruções de escrita.</p>
+    <h3>Comece por aqui</h3>
+    <p>▶ Clique em <b>Tour guiado</b> para ver uma história de ponta a ponta.<br>
+       🎚 Alterne <b>Notion, Azure DevOps e Obsidian</b> no topo: é o mesmo que os checkboxes da tela, e os blocos fora do alcance do agente esmaecem.<br>
+       👆 Clique em qualquer bloco para ver o que faz, por que existe e o código crítico.</p>
+    <h3>Legenda</h3>
+    <div class="legend">
+      <span><i style="background:hsl(225,60%,70%)"></i>interface</span>
+      <span><i style="background:hsl(195,58%,70%)"></i>servidor</span>
+      <span><i style="background:hsl(268,60%,70%)"></i>agente</span>
+      <span><i style="background:hsl(28,60%,70%)"></i>modelo</span>
+      <span><i style="background:hsl(140,55%,70%)"></i>ferramentas</span>
+      <span><i style="background:hsl(45,60%,70%)"></i>memória</span>
+      <span><i style="background:hsl(320,55%,70%)"></i>skills</span>
+      <span><i style="background:hsl(2,60%,70%)"></i>regras e segurança</span>
+      <span><i style="background:hsl(215,15%,70%)"></i>disco</span>
+    </div>
+    <p style="margin-top:6px;color:var(--muted);font-size:13px">Setas tracejadas = fluxo de dados. Base pontilhada = fronteira (navegador, servidor, nuvem, disco).</p>
+    <h3>Rodar o Stories</h3>
+<pre>cd stories
+.\\.venv\\Scripts\\python.exe -m uvicorn server.main:app --port 8020
+# abra http://127.0.0.1:8020</pre>
+    <h3>Duas garantias de segurança</h3>
+    <p>🔒 O agente <b>só lê</b>. Criar o card é uma ação da tela, com a sua confirmação.<br>
+       🔒 Tudo o que o modelo escreve em HTML passa por um sanitizador antes de ir para a tela ou para o Azure.</p>`;
+    return;
+  }
+  const off=isOff(n);
+  detail.innerHTML=`
+    <h2>${n.icon} ${esc(n.name==='HARNESS'?'Harness':n.name)}</h2>
+    <span class="file">${esc(n.file)}</span> <span style="color:var(--muted);font-size:13px"> · ${esc(n.kind)}</span>
+    ${off?`<p style="color:var(--accent)"><b>Fora desta execução:</b> a fonte ${GRP_LABEL[n.grp]} está desmarcada, então o agente não usa este componente.</p>`:''}
+    <h3>O que é</h3><p>${esc(n.what)}</p>
+    <h3>Por que existe</h3><p>${esc(n.why)}</p>
+    <h3>Código</h3><pre>${esc(n.code)}</pre>
+    <h3>Conecta com</h3>
+    <div class="chips">${(n.links||[]).map(l=>`<button data-go="${l}">${NB[l].icon} ${esc(NB[l].name)}</button>`).join('')}</div>
+    <p style="margin-top:14px"><button data-go="">← Visão geral</button></p>`;
+}
+function renderTour(){
+  if(st.step<0){tourBox.style.display='none';return}
+  const s=STEPS[st.step];
+  tourBox.style.display='block';
+  tourBox.innerHTML=`<div class="n">PASSO ${st.step+1} DE ${STEPS.length}</div><h2>${esc(s.t)}</h2><p>${esc(s.x(st.grp))}</p>
+    <div class="nav"><button id="tPrev" ${st.step===0?'disabled':''}>◀ Anterior</button>
+    <button class="primary" id="tNext">${st.step===STEPS.length-1?'↺ Recomeçar':'Próximo ▶'}</button>
+    <button id="tEnd">Sair</button></div>`;
+  document.getElementById('tPrev').onclick=()=>go(st.step-1);
+  document.getElementById('tNext').onclick=()=>go(st.step===STEPS.length-1?0:st.step+1);
+  document.getElementById('tEnd').onclick=()=>go(-1);
+}
+detail.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){select(b.dataset.go||null);if(b.dataset.go)focusNode(b.dataset.go)}});
+
+function refresh(){draw();renderDetail();renderTour();document.getElementById('btnTour').textContent=st.step<0?'▶ Tour guiado':'■ Parar tour'}
+function select(id){st.sel=id;refresh()}
+function go(i){st.step=i;refresh()}
+function toggleGrp(g){
+  st.grp[g]=!st.grp[g];
+  const sw=document.querySelector(`.sw[data-grp="${g}"]`);
+  sw.classList.toggle('on',st.grp[g]);sw.setAttribute('aria-checked',st.grp[g]);
+  refresh();
+}
+document.querySelectorAll('.sw[data-grp]').forEach(sw=>{
+  sw.onclick=()=>toggleGrp(sw.dataset.grp);
+  sw.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();toggleGrp(sw.dataset.grp)}};
+});
+document.getElementById('btnTour').onclick=()=>go(st.step<0?0:-1);
+document.getElementById('btnTheme').onclick=()=>{
+  const r=document.documentElement,dark=getComputedStyle(r).getPropertyValue('--bg').trim()==='#151922';
+  r.setAttribute('data-theme',dark?'light':'dark');
+};
+addEventListener('keydown',e=>{
+  if(st.step<0)return;
+  if(e.key==='ArrowRight'&&st.step<STEPS.length-1)go(st.step+1);
+  if(e.key==='ArrowLeft'&&st.step>0)go(st.step-1);
+  if(e.key==='Escape')go(-1);
+});
+
+/* ============================================================
+   PAN / ZOOM
+   ============================================================ */
+const stage=document.getElementById('stage'), svg=document.getElementById('svg'), view=document.getElementById('view');
+let V={x:0,y:0,k:1}, moved=false;
+const applyV=()=>view.setAttribute('transform',`translate(${V.x} ${V.y}) scale(${V.k})`);
+function fit(){
+  const b=scene.getBBox(), W=stage.clientWidth, H=stage.clientHeight, pad=40;
+  V.k=Math.min((W-pad)/b.width,(H-pad)/b.height);
+  V.x=(W-b.width*V.k)/2-b.x*V.k; V.y=(H-b.height*V.k)/2-b.y*V.k; applyV();
+}
+function zoomAt(f,cx,cy){
+  const k=Math.min(4,Math.max(.25,V.k*f)); f=k/V.k;
+  V.x=cx-(cx-V.x)*f; V.y=cy-(cy-V.y)*f; V.k=k; applyV();
+}
+function focusNode(id){
+  const n=NB[id], [sx,sy]=P(n.x+n.w/2,n.y+n.d/2,n.h);
+  V.x=stage.clientWidth/2-sx*V.k; V.y=stage.clientHeight/2-sy*V.k; applyV();
+}
+let drag=null;
+stage.addEventListener('pointerdown',e=>{if(e.target.closest('.zoom'))return;drag={x:e.clientX,y:e.clientY,vx:V.x,vy:V.y};moved=false});
+addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  if(Math.abs(dx)+Math.abs(dy)>4){moved=true;stage.classList.add('drag')}
+  if(moved){V.x=drag.vx+dx;V.y=drag.vy+dy;applyV()}
+});
+addEventListener('pointerup',e=>{
+  if(!drag)return;
+  const wasMoved=moved; drag=null; stage.classList.remove('drag');
+  if(!wasMoved && !e.target.closest('.node') && !e.target.closest('.zoom')) select(null);
+  setTimeout(()=>moved=false,0);
+});
+stage.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=stage.getBoundingClientRect();
+  zoomAt(e.deltaY<0?1.12:1/1.12,e.clientX-r.left,e.clientY-r.top);
+},{passive:false});
+document.getElementById('zin').onclick=()=>zoomAt(1.25,stage.clientWidth/2,stage.clientHeight/2);
+document.getElementById('zout').onclick=()=>zoomAt(.8,stage.clientWidth/2,stage.clientHeight/2);
+document.getElementById('zfit').onclick=fit;
+addEventListener('resize',fit);
+
+if(/embed/.test(location.search))document.body.classList.add('embed');
+if(/theme=dark/.test(location.search))document.documentElement.setAttribute('data-theme','dark');
+if(/theme=light/.test(location.search))document.documentElement.setAttribute('data-theme','light');
+refresh(); fit();
+</script>
+</body>
+</html>
