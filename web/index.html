@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stories</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9D%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/fonts/merriweather.css">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-logo">📓</span><span class="brand-name">Stories</span></div>
+    <hr>
+    <div class="side-label">Recentes</div>
+    <nav id="recent" class="recent"></nav>
+    <div class="side-spacer"></div>
+    <button id="new-story" class="side-new">📝 Nova História</button>
+    <hr>
+    <ul id="status" class="status"></ul>
+    <hr>
+    <div class="side-user">
+      <button id="open-settings" class="icon-btn" title="Configurações">⚙️</button>
+      <span id="user-name" class="user-name"></span>
+      <button id="toggle-theme" class="icon-btn" title="Alternar tema">☀️</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="page-title">
+      <span class="title-emoji">📝</span>
+      <input id="story-title" class="title-input" value="Nova História" spellcheck="false">
+    </header>
+    <div id="toast" class="toast" hidden></div>
+
+    <div class="columns">
+      <div class="col col-left">
+        <section id="sec-context" class="card collapsible">
+          <div class="card-head"><h2>Contexto inicial</h2><button class="collapse" data-target="sec-context" title="Recolher">⌄</button></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <label>Board</label>
+              <input id="f-board" class="field" readonly>
+              <label>Tipo de card</label>
+              <select id="f-type" class="field">
+                <option>User Story</option>
+                <option>Technical Story</option>
+                <option>Spike</option>
+              </select>
+              <label>Épico</label>
+              <select id="f-epic" class="field"><option value="">Selecione um épico</option></select>
+              <div class="tools-row">
+                <span class="tools-label">TOOLS</span>
+                <label class="tool"><input type="checkbox" id="t-notion" checked> Notion</label>
+                <label class="tool"><input type="checkbox" id="t-azure" checked> Azure DevOps</label>
+                <label class="tool"><input type="checkbox" id="t-obsidian"> Obsidian</label>
+              </div>
+            </div>
+            <div class="row-between">
+              <label>Descrição breve</label>
+              <span class="run-bar"><span id="run-status" class="run-status" hidden></span><button id="btn-generate" class="btn btn-primary">Gerar ✨</button></span>
+            </div>
+            <div id="f-brief" class="rich rich-brief"></div>
+          </div>
+        </section>
+
+        <section id="sec-iter" class="card collapsible">
+          <div class="card-head"><h2>Iteração e Refinamento</h2><button class="collapse" data-target="sec-iter" title="Recolher">⌄</button></div>
+          <div class="card-body">
+            <div id="llm-comment" class="llm-comment"></div>
+            <p id="memory-note" class="memory-note" hidden></p>
+            <div class="row-reply">
+              <div id="f-reply" class="rich rich-reply"></div>
+              <button id="btn-reply" class="btn btn-primary">Responder</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="sec-text" class="card">
+          <h2>Texto do card</h2>
+          <div class="row-between">
+            <label>Prévia do texto</label>
+            <button id="btn-create" class="btn btn-success">Criar card</button>
+          </div>
+          <div id="f-text" class="rich rich-tall"></div>
+        </section>
+      </div>
+
+      <div class="col col-right">
+        <section class="card">
+          <h2>Relacionados</h2>
+          <ul id="related" class="related"></ul>
+        </section>
+        <section id="sec-resources" class="card">
+          <h2>Recursos impactados</h2>
+          <div id="f-resources" class="rich rich-resources"></div>
+        </section>
+        <section id="sec-criteria" class="card">
+          <h2>Critérios de Aceite</h2>
+          <div id="f-criteria" class="rich rich-tall"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="settings-dialog" class="dialog">
+    <form method="dialog" id="settings-form">
+      <h2>Configurações</h2>
+      <label>Seu nome <input name="user_name" class="field"></label>
+      <label>Board (obrigatório) <input name="board_url" class="field" required placeholder="https://dev.azure.com/org/projeto/_boards/board/t/time/Stories"></label>
+      <p id="board-info" class="hint"></p>
+      <div class="multi">
+        <span class="multi-label">Colunas ativas de Épicos</span>
+        <details id="epic-columns" class="multi-box">
+          <summary id="epic-columns-summary" class="field">Selecione</summary>
+          <div id="epic-columns-list" class="multi-list"></div>
+        </details>
+      </div>
+      <label>Servidor Azure Boards MCP (caminho do AzureBoardsMcp.Server.dll) <input name="azure_mcp_dll" class="field"></label>
+      <label>Pasta raiz do Obsidian <input name="obsidian_root" class="field"></label>
+      <label>Página raiz do Notion <input name="notion_root" class="field"></label>
+      <label>Diretório de skills <input name="skills_dir" class="field"></label>
+      <label>Diretório de tools <input name="tools_dir" class="field"></label>
+      <label>System prompt (persona)
+        <textarea name="system_prompt" class="field area" rows="6"></textarea>
+      </label>
+      <p class="hint">As regras do harness, as skills, as fontes habilitadas e a memória são adicionadas automaticamente depois deste texto.</p>
+      <p id="settings-error" class="error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" id="settings-cancel" class="btn">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

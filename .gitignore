@@ -1,0 +1,12 @@
+# Segredos e estado local
+.env
+storage/
+config/settings.local.json
+
+# Material de planejamento
+plan/
+
+# Python
+.venv/
+__pycache__/
+*.pyc

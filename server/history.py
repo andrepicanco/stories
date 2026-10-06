@@ -1,0 +1,95 @@
+"""Histórico persistente (SQLite) das histórias, incluindo o estado completo da página."""
+import json
+import os
+import sqlite3
+from contextlib import contextmanager
+import time
+import uuid
+from pathlib import Path
+
+DB_PATH = Path(os.environ.get("STORIES_DB_PATH") or Path(__file__).resolve().parent.parent / "storage" / "history.db")
+
+
+@contextmanager
+def _conn():
+    """Conexão que confirma a transação ao sair e SEMPRE é fechada (o `with` do sqlite3 não fecha,
+    o que deixava o arquivo do banco preso no Windows)."""
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        with conn:
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS stories (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'draft',
+                    card_id INTEGER,
+                    card_url TEXT,
+                    state TEXT NOT NULL DEFAULT '{}',
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL
+                )"""
+            )
+            yield conn
+    finally:
+        conn.close()
+
+
+def create(title: str = "Nova História") -> dict:
+    now = time.time()
+    story_id = uuid.uuid4().hex
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO stories (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            (story_id, title, now, now),
+        )
+    return get(story_id)
+
+
+def get(story_id: str) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM stories WHERE id = ?", (story_id,)).fetchone()
+    return _row(row) if row else None
+
+
+def list_recent(limit: int = 30) -> list[dict]:
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT id, title, status, card_id, card_url, updated_at FROM stories "
+            "ORDER BY updated_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def save_draft(story_id: str, title: str, state: dict) -> dict | None:
+    """Autosave. Histórias já criadas no Azure ficam travadas e não aceitam alterações."""
+    current = get(story_id)
+    if current is None:
+        return None
+    if current["status"] == "created":
+        return current
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE stories SET title = ?, state = ?, updated_at = ? WHERE id = ?",
+            (title, json.dumps(state, ensure_ascii=False), time.time(), story_id),
+        )
+    return get(story_id)
+
+
+def mark_created(story_id: str, card_id: int, card_url: str, title: str | None = None) -> dict | None:
+    """Trava a história: depois de criada no Azure DevOps ela não aceita mais alterações."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE stories SET status = 'created', card_id = ?, card_url = ?, updated_at = ?, "
+            "title = COALESCE(?, title) WHERE id = ?",
+            (card_id, card_url, time.time(), title, story_id),
+        )
+    return get(story_id)
+
+
+def _row(row: sqlite3.Row) -> dict:
+    data = dict(row)
+    data["state"] = json.loads(data["state"] or "{}")
+    return data

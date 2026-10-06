@@ -1,0 +1,36 @@
+{
+  "user_name": "",
+  "theme": "dark",
+  "azure": {
+    "board_url": "",
+    "epic_active_columns": [],
+    "work_item_types": {
+      "User Story": "User Story",
+      "Technical Story": "Technical Story",
+      "Spike": "Spike"
+    },
+    "fields": {
+      "description": "Description",
+      "acceptance_criteria": "Critérios de Aceite",
+      "impacted_resources": ["Repositórios Alterados", "Recursos impactados"]
+    }
+  },
+  "notion": {
+    "server_url": "https://mcp.notion.com/mcp",
+    "root_page": ""
+  },
+  "obsidian": {
+    "root_dir": ""
+  },
+  "azure_mcp": {
+    "command": "dotnet",
+    "args": []
+  },
+  "agent": {
+    "skills_dir": "agent/skills",
+    "tools_dir": "agent/tools",
+    "max_steps": 12,
+    "max_tool_output": 8000,
+    "system_prompt": ""
+  }
+}
