@@ -36,7 +36,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--serif);
-  font-size: 15px;
+  font-size: 14px;
 }
 
 hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; width: 100%; }
@@ -67,6 +67,11 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; width: 100%
   cursor: pointer;
 }
 .recent a:hover, .recent a.active { background: var(--surface); }
+.recent .item { display: flex; align-items: center; gap: 0px; }
+.recent .item a { flex: 1; min-width: 0; }
+.recent .del { background: none; border: 0; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 6px; border-radius: 6px; opacity: 0; }
+.recent .item:hover .del, .recent .del:focus-visible { opacity: 1; }
+.recent .del:hover { color: var(--danger); background: var(--surface); }
 .side-spacer { flex: 1; }
 .side-new {
   background: var(--accent-active);
@@ -97,7 +102,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; width: 100%
   background: transparent;
   border: 0;
   color: var(--text);
-  font: 600 38px var(--serif);
+  font: 600 28px var(--serif);
   outline: none;
   min-width: 0;
 }
@@ -109,6 +114,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; width: 100%
 .card h2 { margin: 0 0 14px; font-size: 26px; font-weight: 700; }
 .card-head { display: flex; justify-content: space-between; align-items: center; }
 .card-head h2 { margin: 0; }
+.card.collapsible .card-head { cursor: pointer; user-select: none; }
 /* Chevron fino como nos mockups (o mesmo nos dois estados), desenhado com bordas em vez de glifo */
 .collapse { position: relative; width: 30px; height: 30px; background: none; border: 0; color: var(--text); font-size: 0; cursor: pointer; }
 .collapse::before {
@@ -180,7 +186,19 @@ textarea.field::placeholder, input.field::placeholder { color: #9a9a9a; }
 .memory-note { color: var(--text-dim); font-size: 13px; margin: 10px 0 0; }
 
 .row-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.actions { display: flex; gap: 10px; }
 .row-reply { display: flex; gap: 14px; margin-top: 18px; }
+
+/* Feedback humano sobre a última resposta do agente: botões pequenos só com emoji */
+.rating { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.rating[hidden] { display: none; }
+.rating-label { color: var(--text-dim); font-size: 13px; }
+.rate { width: 32px; height: 28px; padding: 0; font-size: 15px; line-height: 1; cursor: pointer; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; }
+.rate:hover:not(:disabled) { background: var(--surface); border-color: var(--text-dim); }
+.rate[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-active); box-shadow: 0 0 0 2px var(--accent-active); }
+.rate:disabled { opacity: .5; cursor: not-allowed; }
+.rating-hint { color: var(--text-dim); font-size: 13px; margin: 6px 0 0; }
+.rating-hint[hidden] { display: none; }
 .llm-comment { white-space: pre-wrap; line-height: 1.4; min-height: 24px; }
 
 .btn { border: 0; border-radius: 4px; padding: 9px 18px; font: 600 14px var(--serif); cursor: pointer; color: #fff; background: var(--surface-2); }
@@ -189,15 +207,21 @@ textarea.field::placeholder, input.field::placeholder { color: #9a9a9a; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
 .related { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.related li { display: flex; align-items: center; gap: 10px; }
+.related li { display: flex; align-items: center; gap: 3px; }
+.related .icons { font-size: 14px; letter-spacing: 2px; flex: none; cursor: default; }
 .related .muted { color: var(--text-dim); font-size: 13px; }
-.related a { background: #fff; color: var(--link); font-size: 12px; padding: 5px 8px; border-radius: 4px; flex: 1; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.related a { background: #fff; color: var(--link); font-size: 12px; padding: 3px 8px; border-radius: 4px; flex: 1; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Critérios de Aceite acompanha o eixo y de "Texto do card": margin-top é ajustado via JS (alignCriteria) */
 
-.toast { background: var(--success); color: #fff; padding: 12px 16px; border-radius: 6px; margin-bottom: 18px; }
+.toast { display: flex; align-items: flex-start; gap: 12px; background: var(--success); color: #fff; padding: 12px 16px; border-radius: 6px; margin-bottom: 18px; }
+.toast[hidden] { display: none; }
+.toast-body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast-close { flex: none; background: none; border: 0; color: inherit; cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 4px; opacity: .85; }
+.toast-close:hover { opacity: 1; background: rgba(255, 255, 255, .2); }
 .toast a { color: #fff; font-weight: 700; }
-.toast.error { background: var(--danger); }
+/* color explícito: a regra global `.error` (texto vermelho) deixava a letra da mesma cor do fundo */
+.toast.error { background: var(--danger); color: #fff; }
 
 .locked .field, .locked .btn, .locked input, .locked select, .locked textarea { pointer-events: none; opacity: .65; }
 
@@ -209,6 +233,7 @@ textarea.field::placeholder, input.field::placeholder { color: #9a9a9a; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
 .error { color: var(--danger); margin: 0; }
 .hint { color: var(--text-dim); font-size: 13px; margin: -6px 0 0; }
+.dialog label.check { flex-direction: row; align-items: center; gap: 10px; }
 
 /* Dropdown com checkboxes */
 .multi { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }

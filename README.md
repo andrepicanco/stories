@@ -132,10 +132,12 @@ Clique na engrenagem, na barra lateral. As alterações ficam em `config/setting
 | **Board** *(obrigatório)* | O **link do board** do Azure DevOps (copie da barra de endereços ao abrir o board de Stories). Daqui saem a organização, o projeto, o time e o nível do backlog. |
 | **Colunas ativas de Épicos** | Marque as colunas do board de Épicos que contam como "ativas". Só os épicos nessas colunas aparecem na lista. As colunas vêm direto do seu board. |
 | **Servidor Azure Boards MCP** | Caminho do arquivo `AzureBoardsMcp.Server.dll` (opcional; sem ele o Azure continua funcionando pela API direta). |
+| **Wiki do Azure DevOps** | Link de uma página da wiki do time (opcional). A página vira a raiz: o assistente pode listar, buscar por título e ler as páginas abaixo dela, junto com a fonte *Azure DevOps*. |
 | **Pasta raiz do Obsidian** | A pasta do seu *vault*. O assistente só lê arquivos `.md` dentro dela. |
 | **Página raiz do Notion** | Link da página principal do projeto, para o assistente focar as buscas ali. |
 | **Diretórios de skills e de tools** | Onde ficam as skills e as ferramentas (padrão: `agent/skills` e `agent/tools`). |
 | **System prompt (persona)** | Quem o assistente "é" e como deve se comportar. Quando vazio, usa o padrão. As regras de segurança são acrescentadas automaticamente depois do seu texto. |
+| **Exigir feedback humano** | Ligado por padrão: o botão **Responder** só libera depois que você avalia a última resposta do assistente (veja abaixo). Desligue quando o assistente já estiver performando bem. |
 
 ### Conectar o Notion (uma vez)
 
@@ -161,6 +163,7 @@ Ao lado de **Notion MCP**, na barra lateral, clique em **conectar**, entre na su
 - O assistente pode **fazer até 2 perguntas** antes de escrever, quando falta uma informação essencial. Responda no campo de resposta e clique em **Responder**.
 - Depois de gerado, você pode editar qualquer texto na mão. Ao clicar em **Responder**, **todos** os textos atuais (com as suas edições) voltam ao assistente junto com a sua mensagem.
 - Sua resposta pode ser um **pedido de mudança** ("simplifique o objetivo") ou um **feedback** ("gostei, mas prefiro critérios mais curtos"). Preferências que valem para as próximas histórias podem ser guardadas na memória do assistente (o aviso 🧠 aparece abaixo do comentário).
+- **Avalie cada resposta do assistente** com os botões 👍 (bom), ◽ (neutro) e 👎 (ruim) em *Iteração e Refinamento*. É a medida de qualidade feita por uma pessoa, e não pelo próprio modelo. Com a opção **Exigir feedback humano** ligada, **Responder** (e o `Ctrl+Enter`) só funcionam depois da avaliação. Você pode trocar a nota até responder. A coluna `rating` de `storage/history.db` guarda **só a última** avaliação de cada história; as anteriores são sobrescritas.
 - Se o título ainda não foi mexido por você, o assistente o preenche. Se você o editou, ele nunca mais o sobrescreve.
 
 **Criar o card**
@@ -207,7 +210,7 @@ stories/
 └── .env                    Seus segredos (fora do git)
 ```
 
-**Para "esquecer" algo:** a memória do assistente é o arquivo `storage/memory.json`, uma lista simples de frases. Pode editá-lo ou apagá-lo. O histórico das histórias fica em `storage/history.db`.
+**Para "esquecer" algo:** a memória do assistente é o arquivo `storage/memory.json`, uma lista simples de frases. Pode editá-lo ou apagá-lo. O histórico das histórias fica em `storage/history.db` (tabela `stories`, com a coluna `rating` do feedback humano). O ✕ ao lado de uma história em *Recentes* remove só a cópia local, junto com a avaliação; o card no Azure DevOps não é afetado.
 
 ## Testes
 

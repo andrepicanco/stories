@@ -3,6 +3,7 @@
   "theme": "dark",
   "azure": {
     "board_url": "",
+    "wiki_url": "",
     "epic_active_columns": [],
     "work_item_types": {
       "User Story": "User Story",
@@ -25,6 +26,9 @@
   "azure_mcp": {
     "command": "dotnet",
     "args": []
+  },
+  "evals": {
+    "require_human_feedback": true
   },
   "agent": {
     "skills_dir": "agent/skills",
