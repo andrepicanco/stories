@@ -22,6 +22,7 @@ from integrations.board_url import InvalidBoardUrl, parse_board_url
 from integrations.html_sanitize import sanitize_html
 from integrations.html_text import html_to_text
 from integrations.notion_oauth import NotionAuthError
+from integrations.wiki_url import InvalidWikiUrl, parse_wiki_url
 
 from . import cards, history, settings
 from .jobs import jobs
@@ -100,6 +101,12 @@ def get_settings() -> dict:
 
 @app.put("/api/settings")
 def put_settings(patch: dict) -> dict:
+    wiki_url = patch.get("azure", {}).get("wiki_url")
+    if wiki_url and wiki_url.strip():
+        try:
+            parse_wiki_url(wiki_url)
+        except InvalidWikiUrl as err:
+            raise HTTPException(422, str(err)) from err
     board_url = patch.get("azure", {}).get("board_url")
     if board_url is not None:
         if not board_url.strip():
@@ -335,6 +342,30 @@ def get_story(story_id: str) -> dict:
     if story is None:
         raise HTTPException(404, "História não encontrada.")
     return story
+
+
+@app.delete("/api/history/{story_id}")
+def delete_story(story_id: str) -> dict:
+    """Remove da lista local de recentes. O card no Azure DevOps (se existir) não é afetado."""
+    if not history.delete(story_id):
+        raise HTTPException(404, "História não encontrada.")
+    return {"ok": True}
+
+
+class RatingIn(BaseModel):
+    rating: str
+
+
+@app.put("/api/history/{story_id}/rating")
+def rate_story(story_id: str, body: RatingIn) -> dict:
+    """Feedback humano (good/neutral/bad) sobre a última resposta do agente; mantém só o mais recente."""
+    try:
+        story = history.set_rating(story_id, body.rating)
+    except ValueError as err:
+        raise HTTPException(422, str(err)) from err
+    if story is None:
+        raise HTTPException(404, "História não encontrada.")
+    return {"story_id": story_id, "rating": story["rating"]}
 
 
 @app.put("/api/drafts/{story_id}")

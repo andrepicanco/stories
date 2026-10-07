@@ -46,6 +46,7 @@ def build_agent(settings: dict, enabled_groups: list[str], memory_path: Path = M
         enabled_groups=enabled_groups,
         tools_by_group=count_by_group(tools),
         notion_root=settings["notion"].get("root_page", ""),
+        wiki_root=settings["azure"].get("wiki_url", ""),
     )
     return Agent(
         system_prompt=prompt,

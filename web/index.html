@@ -31,12 +31,15 @@
       <span class="title-emoji">📝</span>
       <input id="story-title" class="title-input" value="Nova História" spellcheck="false">
     </header>
-    <div id="toast" class="toast" hidden></div>
+    <div id="toast" class="toast" role="alert" hidden>
+      <div id="toast-body" class="toast-body"></div>
+      <button id="toast-close" class="toast-close" title="Dispensar" aria-label="Dispensar alerta">✕</button>
+    </div>
 
     <div class="columns">
       <div class="col col-left">
         <section id="sec-context" class="card collapsible">
-          <div class="card-head"><h2>Contexto inicial</h2><button class="collapse" data-target="sec-context" title="Recolher">⌄</button></div>
+          <div class="card-head" role="button" tabindex="0"><h2>Contexto inicial</h2><button class="collapse" data-target="sec-context" title="Recolher">⌄</button></div>
           <div class="card-body">
             <div class="form-grid">
               <label>Board</label>
@@ -65,10 +68,17 @@
         </section>
 
         <section id="sec-iter" class="card collapsible">
-          <div class="card-head"><h2>Iteração e Refinamento</h2><button class="collapse" data-target="sec-iter" title="Recolher">⌄</button></div>
+          <div class="card-head" role="button" tabindex="0"><h2>Iteração e Refinamento</h2><button class="collapse" data-target="sec-iter" title="Recolher">⌄</button></div>
           <div class="card-body">
             <div id="llm-comment" class="llm-comment"></div>
             <p id="memory-note" class="memory-note" hidden></p>
+            <div id="rating" class="rating" role="group" aria-label="Avalie a resposta do agente" hidden>
+              <span class="rating-label">Avalie a resposta:</span>
+              <button type="button" class="rate" data-rating="good" title="Bom" aria-label="Bom" aria-pressed="false">👍</button>
+              <button type="button" class="rate" data-rating="neutral" title="Neutro" aria-label="Neutro" aria-pressed="false">◽</button>
+              <button type="button" class="rate" data-rating="bad" title="Ruim" aria-label="Ruim" aria-pressed="false">👎</button>
+            </div>
+            <p id="rating-hint" class="rating-hint" hidden>Avalie a resposta para liberar o Responder.</p>
             <div class="row-reply">
               <div id="f-reply" class="rich rich-reply"></div>
               <button id="btn-reply" class="btn btn-primary">Responder</button>
@@ -80,7 +90,7 @@
           <h2>Texto do card</h2>
           <div class="row-between">
             <label>Prévia do texto</label>
-            <button id="btn-create" class="btn btn-success">Criar card</button>
+            <span class="actions"><button id="btn-clear" class="btn" title="Apaga o texto do card, os recursos impactados e os critérios de aceite">Limpar card</button><button id="btn-create" class="btn btn-success">Criar card</button></span>
           </div>
           <div id="f-text" class="rich rich-tall"></div>
         </section>
@@ -117,6 +127,7 @@
         </details>
       </div>
       <label>Servidor Azure Boards MCP (caminho do AzureBoardsMcp.Server.dll) <input name="azure_mcp_dll" class="field"></label>
+      <label>Wiki do Azure DevOps (URL da página raiz, opcional) <input name="wiki_url" class="field" placeholder="https://dev.azure.com/org/projeto/_wiki/wikis/wiki/123/Pagina"></label>
       <label>Pasta raiz do Obsidian <input name="obsidian_root" class="field"></label>
       <label>Página raiz do Notion <input name="notion_root" class="field"></label>
       <label>Diretório de skills <input name="skills_dir" class="field"></label>
@@ -125,6 +136,8 @@
         <textarea name="system_prompt" class="field area" rows="6"></textarea>
       </label>
       <p class="hint">As regras do harness, as skills, as fontes habilitadas e a memória são adicionadas automaticamente depois deste texto.</p>
+      <label class="check"><input type="checkbox" name="require_feedback"> Exigir feedback humano (👍 ◽ 👎) antes de Responder</label>
+      <p class="hint">Desative quando o agente estiver performando bem. Cada avaliação grava o último rating da história no histórico.</p>
       <p id="settings-error" class="error" hidden></p>
       <div class="dialog-actions">
         <button type="button" id="settings-cancel" class="btn">Cancelar</button>

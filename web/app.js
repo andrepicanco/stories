@@ -17,6 +17,9 @@ const app = {
   titleEdited: false,    // o agente só preenche o título se o usuário ainda não mexeu nele
   memoryNote: "",
   running: false,
+  // Feedback humano sobre a última resposta do agente: undefined = ainda não houve resposta;
+  // null = aguardando avaliação; "good" | "neutral" | "bad" = avaliada.
+  rating: undefined,
 };
 const editors = {};
 
@@ -75,6 +78,29 @@ function renderEpicOptions(selectedId = "") {
   $("#f-epic").value = selectedId || "";
 }
 
+// Ícones de "Relacionados": tipo do card e fase (estado do Azure). Desconhecidos caem no padrão.
+const TYPE_ICONS = { "user story": "📖", "technical story": "🔧", "spike": "🔬", "design story": "🎨", "bug": "🐞" };
+const STATE_ICONS = {
+  "new": "⚪", "to do": "⚪",                                     // a fazer
+  "refining": "🟡", "tech refining": "🟡",                       // refinamento
+  "in progress": "🔵", "active": "🔵",                           // em andamento
+  "waiting validation qa": "🟣", "validating qa": "🟣", "user acceptance testing": "🟣",   // validação
+  "package integration": "🟠", "waiting deploy": "🟠", "validating prod": "🟠",   // entrega
+  "done": "✅", "closed": "✅",
+  "discontinued": "⛔", "removed": "⛔",
+};
+const typeIcon = (type) => TYPE_ICONS[(type || "").toLowerCase()] || "📄";
+const stateIcon = (state) => STATE_ICONS[(state || "").toLowerCase()] || "⚪";
+
+function relatedItem(c) {
+  const tip = `#${c.id} · ${c.title}\n${c.type} · ${c.state}`;
+  return `<li>
+    <input type="checkbox" data-id="${c.id}" ${epicState.relatedSelected.has(c.id) ? "checked" : ""}>
+    <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" title="${escapeHtml(tip)}">${c.id} ${escapeHtml(c.title)}</a>
+    <span class="icons" title="${escapeHtml(`${c.type} · ${c.state}`)}">${typeIcon(c.type)}${stateIcon(c.state)}</span>
+  </li>`;
+}
+
 async function loadChildren(epicId) {
   const list = $("#related");
   epicState.children = [];
@@ -84,10 +110,7 @@ async function loadChildren(epicId) {
     const children = await api(`/api/epics/${epicId}/children`);
     epicState.children = children;
     list.innerHTML = children.length
-      ? children.map((c) => `<li>
-          <input type="checkbox" data-id="${c.id}" ${epicState.relatedSelected.has(c.id) ? "checked" : ""}>
-          <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" title="${escapeHtml(`${c.type} · ${c.state}`)}">${c.id} ${escapeHtml(c.title)}</a>
-        </li>`).join("")
+      ? children.map(relatedItem).join("")
       : '<li class="muted">Este épico não tem cards filhos.</li>';
   } catch (err) {
     list.innerHTML = `<li class="muted">${escapeHtml(err.message)}</li>`;
@@ -108,6 +131,7 @@ function collectState() {
     resources: editors.resources.getHTML(),
     criteria: editors.criteria.getHTML(),
     chat: app.chat,
+    rating: app.rating,
     titleEdited: app.titleEdited,
     memoryNote: app.memoryNote,
     collapsed: [...document.querySelectorAll(".card.collapsed")].map((el) => el.id),
@@ -130,6 +154,7 @@ function applyState(state = {}) {
   editors.criteria.setHTML(state.criteria);
   $("#llm-comment").textContent = state.comment || "";
   app.chat = state.chat || [];
+  app.rating = state.rating;
   app.titleEdited = !!state.titleEdited;
   setMemoryNote(state.memoryNote || "");
   document.querySelectorAll(".card.collapsible").forEach((el) => {
@@ -147,8 +172,51 @@ function refreshEditable() {
   $(".columns").classList.toggle("locked", locked);
   $("#story-title").disabled = locked || app.running;
   $("#btn-generate").disabled = locked || app.running;
-  $("#btn-reply").disabled = locked || app.running;
+  $("#btn-reply").disabled = locked || app.running || replyBlocked();
   $("#btn-create").disabled = locked || app.running;
+  $("#btn-clear").disabled = locked || app.running;
+  renderRating();
+}
+
+function clearCard() {
+  if (!confirm("Limpar o texto do card, os recursos impactados e os critérios de aceite?\n\nO título e os demais campos são mantidos.")) return;
+  editors.text.setHTML("");
+  editors.resources.setHTML("");
+  editors.criteria.setHTML("");
+  alignCriteria();
+  scheduleSave();
+}
+
+/* ---------- Feedback humano sobre a resposta do agente (eval) ---------- */
+function feedbackRequired() {
+  const evals = (app.settings && app.settings.evals) || {};
+  return evals.require_human_feedback !== false;
+}
+
+/** Responder fica indisponível enquanto a última resposta do agente não foi avaliada. */
+function replyBlocked() { return feedbackRequired() && app.rating === null; }
+
+function renderRating() {
+  $("#rating").hidden = app.rating === undefined;
+  document.querySelectorAll("#rating .rate").forEach((btn) => {
+    btn.setAttribute("aria-pressed", String(btn.dataset.rating === app.rating));
+    btn.disabled = isLocked() || app.running;
+  });
+  $("#rating-hint").hidden = !(replyBlocked() && !isLocked());
+}
+
+async function rateResponse(rating) {
+  if (!app.story || isLocked() || app.running || app.rating === undefined) return;
+  const storyId = app.story.id;
+  try {
+    await api(`/api/history/${storyId}/rating`, { method: "PUT", body: { rating } });
+    if (!app.story || app.story.id !== storyId) return;   // trocou de história durante a gravação
+    app.rating = rating;
+    refreshEditable();
+    scheduleSave();
+  } catch (err) {
+    showToast(escapeHtml(err.message), true);
+  }
 }
 
 function setMemoryNote(text) {
@@ -208,8 +276,19 @@ async function newStory() {
 async function refreshRecent() {
   const items = await api("/api/history");
   $("#recent").innerHTML = items
-    .map((s) => `<a data-id="${s.id}" class="${app.story && app.story.id === s.id ? "active" : ""}" title="${s.status === "created" ? `Criado no Azure DevOps (#${s.card_id})` : "Rascunho"}">${s.status === "created" ? "✅ " : ""}${escapeHtml(s.title)}</a>`)
+    .map((s) => `<div class="item"><a data-id="${s.id}" class="${app.story && app.story.id === s.id ? "active" : ""}" title="${s.status === "created" ? `Criado no Azure DevOps (#${s.card_id})` : "Rascunho"}">${s.status === "created" ? "✅ " : ""}${escapeHtml(s.title)}</a><button class="del" data-del="${s.id}" title="Remover da lista" aria-label="Remover da lista">✕</button></div>`)
     .join("");
+}
+
+/** Remove só da lista local; o card no Azure DevOps (se existir) não é afetado. */
+async function deleteStory(id) {
+  if (!confirm("Remover esta história da lista de recentes?\n\nO card no Azure DevOps, se já criado, não é afetado.")) return;
+  const wasOpen = app.story && app.story.id === id;
+  if (wasOpen) clearTimeout(app.saveTimer);   // um autosave pendente não deve recriar a história removida
+  await api(`/api/history/${id}`, { method: "DELETE" });
+  if (!wasOpen) { refreshRecent(); return; }
+  const rest = await api("/api/history");
+  if (rest.length) await openStory(rest[0].id); else await newStory();
 }
 
 /* ---------- Status e settings ---------- */
@@ -274,6 +353,8 @@ function fillSettingsForm() {
   epicColumns.loadedFor = null;
   loadEpicColumns();
   f.azure_mcp_dll.value = (s.azure_mcp.args || [])[0] || "";
+  f.wiki_url.value = s.azure.wiki_url || "";
+  f.require_feedback.checked = (s.evals || {}).require_human_feedback !== false;
   f.obsidian_root.value = s.obsidian.root_dir;
   f.notion_root.value = s.notion.root_page;
   f.skills_dir.value = s.agent.skills_dir;
@@ -288,11 +369,13 @@ async function saveSettings(event) {
     user_name: f.user_name.value.trim(),
     azure: {
       board_url: f.board_url.value.trim(),
+      wiki_url: f.wiki_url.value.trim(),
       epic_active_columns: [...epicColumns.selected],
     },
     azure_mcp: { args: f.azure_mcp_dll.value.trim() ? [f.azure_mcp_dll.value.trim()] : [] },
     obsidian: { root_dir: f.obsidian_root.value.trim() },
     notion: { root_page: f.notion_root.value.trim() },
+    evals: { require_human_feedback: f.require_feedback.checked },
     agent: {
       skills_dir: f.skills_dir.value.trim(),
       tools_dir: f.tools_dir.value.trim(),
@@ -308,6 +391,7 @@ async function saveSettings(event) {
     app.defaults = data.defaults;
     applyChrome();
     showBoardInfo();
+    refreshEditable();     // o switch de feedback obrigatório vale já
     loadEpics();
     error.hidden = true;
     $("#settings-dialog").close();
@@ -332,7 +416,7 @@ function showBoardInfo() {
 /* ---------- Toast ---------- */
 function showToast(html, isError = false) {
   const el = $("#toast");
-  el.innerHTML = html;
+  $("#toast-body").innerHTML = html;
   el.classList.toggle("error", isError);
   el.hidden = false;
   // O alerta fica no topo, e botões como "Criar card" ficam no fim da página: leva o usuário até ele.
@@ -428,6 +512,7 @@ function applyResult(result, replyText) {
     if (result.title && !app.titleEdited) $("#story-title").value = result.title;
   }
   $("#llm-comment").textContent = comment;
+  app.rating = null;                       // nova resposta: aguarda a avaliação humana
   editors.reply.setHTML("");
   setMemoryNote(result.learnings_saved.length ? `🧠 Memória atualizada: ${result.learnings_saved.join(" · ")}` : "");
   $("#sec-iter").classList.remove("collapsed");   // o comentário precisa estar visível
@@ -441,6 +526,7 @@ async function runAgent(kind) {
 
   if (isEmptyHtml(body.brief)) { showToast("Descreva o objetivo do card em “Descrição breve”.", true); return; }
   if (kind === "reply") {
+    if (replyBlocked()) { showToast("Avalie a resposta (👍 ◽ 👎) antes de responder.", true); return; }   // vale também para o Ctrl+Enter
     if (isEmptyHtml(body.reply)) { showToast("Digite uma resposta para enviar ao agente.", true); return; }
     if (!app.chat.length && isEmptyHtml(body.card_html)) { showToast("Clique em Gerar antes de responder.", true); return; }
   } else if (!isEmptyHtml(editors.text.getHTML()) &&
@@ -525,7 +611,18 @@ function bindEvents() {
   $("#btn-reply").addEventListener("click", () => runAgent("reply"));
   $("#btn-create").addEventListener("click", createCard);
   $("#new-story").addEventListener("click", newStory);
+  $("#btn-clear").addEventListener("click", clearCard);
+  $("#toast-close").addEventListener("click", hideToast);
+  $("#rating").addEventListener("click", (e) => {
+    const btn = e.target.closest(".rate");
+    if (btn) rateResponse(btn.dataset.rating);
+  });
   $("#recent").addEventListener("click", (e) => {
+    const del = e.target.closest("button[data-del]");
+    if (del) {
+      deleteStory(del.dataset.del).catch((err) => showToast(escapeHtml(err.message), true));
+      return;
+    }
     const link = e.target.closest("a[data-id]");
     if (link) openStory(link.dataset.id);
   });
@@ -543,11 +640,16 @@ function bindEvents() {
     $("#epic-columns").open = true;
   });
 
-  document.querySelectorAll(".collapse").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.getElementById(btn.dataset.target).classList.toggle("collapsed");
+  // Qualquer ponto do cabeçalho recolhe/expande a seção (o botão ⌄ está dentro dele).
+  document.querySelectorAll(".card.collapsible > .card-head").forEach((head) => {
+    const toggle = () => {
+      head.parentElement.classList.toggle("collapsed");
       alignCriteria();
       scheduleSave();
+    };
+    head.addEventListener("click", toggle);
+    head.addEventListener("keydown", (e) => {
+      if (e.target === head && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(); }
     });
   });
 

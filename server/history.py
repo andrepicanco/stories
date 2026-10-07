@@ -28,9 +28,13 @@ def _conn():
                     card_url TEXT,
                     state TEXT NOT NULL DEFAULT '{}',
                     created_at REAL NOT NULL,
-                    updated_at REAL NOT NULL
+                    updated_at REAL NOT NULL,
+                    rating TEXT
                 )"""
             )
+            # Bancos criados antes do rating ganham a coluna na primeira abertura.
+            if not any(col["name"] == "rating" for col in conn.execute("PRAGMA table_info(stories)")):
+                conn.execute("ALTER TABLE stories ADD COLUMN rating TEXT")
             yield conn
     finally:
         conn.close()
@@ -51,6 +55,25 @@ def get(story_id: str) -> dict | None:
     with _conn() as conn:
         row = conn.execute("SELECT * FROM stories WHERE id = ?", (story_id,)).fetchone()
     return _row(row) if row else None
+
+
+def delete(story_id: str) -> bool:
+    """Remove só do histórico local; nada é alterado no Azure DevOps."""
+    with _conn() as conn:
+        return conn.execute("DELETE FROM stories WHERE id = ?", (story_id,)).rowcount > 0
+
+
+RATINGS = ("good", "neutral", "bad")
+
+
+def set_rating(story_id: str, rating: str) -> dict | None:
+    """Grava o último feedback humano (bom/neutro/ruim) da história, sobrescrevendo o anterior.
+    Não altera `updated_at`: avaliar não deve reordenar a lista de recentes."""
+    if rating not in RATINGS:
+        raise ValueError(f"Avaliação inválida: {rating!r}. Use {', '.join(RATINGS)}.")
+    with _conn() as conn:
+        conn.execute("UPDATE stories SET rating = ? WHERE id = ?", (rating, story_id))
+    return get(story_id)
 
 
 def list_recent(limit: int = 30) -> list[dict]:

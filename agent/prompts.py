@@ -32,12 +32,17 @@ def build_system_prompt(
     tools_by_group: dict[str, int],
     today: date | None = None,
     notion_root: str = "",
+    wiki_root: str = "",
 ) -> str:
     sources = []
     for group in enabled_groups:
         label = GROUP_LABELS.get(group, group)
         if tools_by_group.get(group, 0):
-            hint = f" (página raiz do projeto: {notion_root}; prefira buscar dentro dela)" if group == "notion" and notion_root else ""
+            hint = ""
+            if group == "notion" and notion_root:
+                hint = f" (página raiz do projeto: {notion_root}; prefira buscar dentro dela)"
+            elif group == "azure" and wiki_root:
+                hint = " (cards, e também a wiki do time: use wiki_search, wiki_list_pages e wiki_read_page)"
             sources.append(f"- {label}: disponível{hint}")
         else:
             sources.append(f"- {label}: indisponível nesta execução (não configurada ou sem conexão)")
