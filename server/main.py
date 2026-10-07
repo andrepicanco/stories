@@ -107,6 +107,9 @@ def put_settings(patch: dict) -> dict:
             parse_wiki_url(wiki_url)
         except InvalidWikiUrl as err:
             raise HTTPException(422, str(err)) from err
+    glossary_path = (patch.get("glossary", {}).get("path") or "").strip()
+    if glossary_path and not Path(glossary_path).is_file():
+        raise HTTPException(422, f"Arquivo do glossário não encontrado: {glossary_path}")
     board_url = patch.get("azure", {}).get("board_url")
     if board_url is not None:
         if not board_url.strip():
@@ -287,7 +290,13 @@ def _start_run(body: RunIn, require_reply: bool) -> dict:
             LLM(), settings.load_settings(), inp,
             on_step=lambda s: on_step({"tool": s.tool, "args": s.args[:200], "error": s.error}),
         )
-        return asdict(result)
+        out = asdict(result)
+        # Conta no servidor, só quando o agente respondeu: falhas não contam e o eval não depende da tela aberta.
+        try:
+            history.add_iteration(body.story_id)
+        except Exception as err:  # noqa: BLE001 - o resultado da geração não pode se perder por causa do contador
+            out["warnings"] = [*out["warnings"], f"Não foi possível registrar a iteração: {err}"]
+        return out
 
     return jobs.start(work).public()
 

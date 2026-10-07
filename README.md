@@ -17,12 +17,13 @@ Roda no seu computador, no navegador. Nada é publicado em lugar nenhum além do
 5. [Como rodar](#como-rodar)
 6. [Configuração (⚙️)](#configuração-️)
 7. [Passo a passo de uma história](#passo-a-passo-de-uma-história)
-8. [Segurança: o que a IA pode e não pode fazer](#segurança-o-que-a-ia-pode-e-não-pode-fazer)
-9. [Onde ficam as coisas](#onde-ficam-as-coisas)
-10. [Testes](#testes)
-11. [Problemas comuns](#problemas-comuns)
-12. [Limitações conhecidas](#limitações-conhecidas)
-13. [Glossário](#glossário)
+8. [Glossário de Cobrança](#glossário-de-cobrança)
+9. [Segurança: o que a IA pode e não pode fazer](#segurança-o-que-a-ia-pode-e-não-pode-fazer)
+10. [Onde ficam as coisas](#onde-ficam-as-coisas)
+11. [Testes](#testes)
+12. [Problemas comuns](#problemas-comuns)
+13. [Limitações conhecidas](#limitações-conhecidas)
+14. [Glossário](#glossário)
 
 ---
 
@@ -133,6 +134,7 @@ Clique na engrenagem, na barra lateral. As alterações ficam em `config/setting
 | **Colunas ativas de Épicos** | Marque as colunas do board de Épicos que contam como "ativas". Só os épicos nessas colunas aparecem na lista. As colunas vêm direto do seu board. |
 | **Servidor Azure Boards MCP** | Caminho do arquivo `AzureBoardsMcp.Server.dll` (opcional; sem ele o Azure continua funcionando pela API direta). |
 | **Wiki do Azure DevOps** | Link de uma página da wiki do time (opcional). A página vira a raiz: o assistente pode listar, buscar por título e ler as páginas abaixo dela, junto com a fonte *Azure DevOps*. |
+| **Arquivo do glossário** | Caminho do JSON gerado a partir da planilha do glossário (opcional; veja [Glossário de Cobrança](#glossário-de-cobrança)). Sem ele, a ferramenta de glossário simplesmente não existe para o assistente. |
 | **Pasta raiz do Obsidian** | A pasta do seu *vault*. O assistente só lê arquivos `.md` dentro dela. |
 | **Página raiz do Notion** | Link da página principal do projeto, para o assistente focar as buscas ali. |
 | **Diretórios de skills e de tools** | Onde ficam as skills e as ferramentas (padrão: `agent/skills` e `agent/tools`). |
@@ -163,7 +165,7 @@ Ao lado de **Notion MCP**, na barra lateral, clique em **conectar**, entre na su
 - O assistente pode **fazer até 2 perguntas** antes de escrever, quando falta uma informação essencial. Responda no campo de resposta e clique em **Responder**.
 - Depois de gerado, você pode editar qualquer texto na mão. Ao clicar em **Responder**, **todos** os textos atuais (com as suas edições) voltam ao assistente junto com a sua mensagem.
 - Sua resposta pode ser um **pedido de mudança** ("simplifique o objetivo") ou um **feedback** ("gostei, mas prefiro critérios mais curtos"). Preferências que valem para as próximas histórias podem ser guardadas na memória do assistente (o aviso 🧠 aparece abaixo do comentário).
-- **Avalie cada resposta do assistente** com os botões 👍 (bom), ◽ (neutro) e 👎 (ruim) em *Iteração e Refinamento*. É a medida de qualidade feita por uma pessoa, e não pelo próprio modelo. Com a opção **Exigir feedback humano** ligada, **Responder** (e o `Ctrl+Enter`) só funcionam depois da avaliação. Você pode trocar a nota até responder. A coluna `rating` de `storage/history.db` guarda **só a última** avaliação de cada história; as anteriores são sobrescritas.
+- **Avalie cada resposta do assistente** com os botões 👍 (bom), ◽ (neutro) e 👎 (ruim) em *Iteração e Refinamento*. É a medida de qualidade feita por uma pessoa, e não pelo próprio modelo. Com a opção **Exigir feedback humano** ligada, **Responder** (e o `Ctrl+Enter`) só funcionam depois da avaliação. Você pode trocar a nota até responder. A coluna `rating` de `storage/history.db` guarda **só a última** avaliação de cada história; as anteriores são sobrescritas. Ao lado dela, a coluna `iterations` conta quantas respostas o assistente já deu naquela história (cada **Gerar** e cada **Responder** bem-sucedido soma 1, então o mínimo é 1): é a base para cruzar a nota com o esforço de refinamento numa avaliação futura. Histórias anteriores a esse contador ficam com 0.
 - Se o título ainda não foi mexido por você, o assistente o preenche. Se você o editou, ele nunca mais o sobrescreve.
 
 **Criar o card**
@@ -177,6 +179,22 @@ Para criar é preciso ter **título** (diferente de "Nova História"), **texto d
 Depois de criado, a história fica **travada** (não dá mais para editar) e aparece com ✅ na lista de recentes. Clique nela a qualquer momento para rever o conteúdo e o link do card.
 
 > ℹ️ **Spike** não tem o campo de recursos impactados no Azure. Nesse caso o conteúdo vai para o final da descrição, e a ferramenta avisa.
+
+## Glossário de Cobrança
+
+Um vocabulário curto, mantido por você, que ajuda o assistente a entender siglas, abreviações e jargão ("reneg", "birô") antes de buscar nas fontes. Funciona assim:
+
+1. **Você edita o Excel** (aba `Entidades`, colunas `tipo`, `nome_canonico`, `sinonimos`, `nota`, `status`). Separe os sinônimos com `;`. Só linhas com `status: ativo` entram no assistente; `revisar` fica de fora.
+2. **Você converte o Excel em JSON**, sem IA, na raiz do projeto:
+   ```powershell
+   .\.venv\Scripts\python.exe -m scripts.glossario_build C:\caminho\ontologia-minima-cobranca.xlsx
+   ```
+   O JSON é gravado ao lado da planilha (`glossario-cobranca.json`). Rodar de novo com o mesmo Excel gera o mesmo arquivo. O comando também lista os aliases ambíguos (um termo que vale para mais de uma entrada, como "birô"). Feche o Excel antes se ele reclamar de arquivo em uso.
+3. **Você informa o JSON em ⚙️** (*Arquivo do glossário*), uma vez. Depois disso, cada nova geração já usa o arquivo atual, sem reiniciar a ferramenta.
+
+O glossário **não vai para o prompt**. O assistente ganha a ferramenta de leitura `glossario_buscar` e a chama quando encontra um termo desconhecido ou que não faça sentido. A busca é exata (sem distinguir acento nem maiúscula) no nome canônico e nos sinônimos; se o termo não estiver lá, ele segue com o termo como veio. Esta versão não tem relações entre entidades nem busca aproximada.
+
+> 🔒 A planilha e o JSON têm dados internos: mantenha-os **fora do repositório** (por exemplo, numa pasta ao lado do projeto).
 
 ## Segurança: o que a IA pode e não pode fazer
 
@@ -197,12 +215,14 @@ stories/
 ├── server/                 O servidor: API, histórico, criação de cards, execuções em segundo plano
 ├── agent/                  O assistente
 │   ├── harness/            O loop que orquestra modelo e ferramentas
-│   ├── tools/              Ferramentas de leitura (Obsidian, Azure REST, Azure MCP, Notion)
+│   ├── tools/              Ferramentas de leitura (Obsidian, Azure REST e wiki, Azure MCP, Notion, glossário)
+│   ├── glossary.py         Índice de aliases do glossário (nome canônico e sinônimos)
 │   ├── skills/             Manuais de escrita (uma pasta por skill, com um SKILL.md)
 │   ├── generation.py       Monta a tarefa e valida a resposta do modelo
 │   ├── memory.py           Memória de aprendizados
 │   └── mcp_bridge.py       Conexões com os servidores MCP
 ├── integrations/           Azure DevOps (API), OAuth do Notion, limpeza de HTML
+├── scripts/                glossario_build.py: converte a planilha do glossário em JSON
 ├── config/                 settings.json (padrão) e settings.local.json (suas escolhas)
 ├── storage/                Dados locais: histórico, memória, token do Notion (fora do git)
 ├── docs/                   Mapa de arquitetura (arquitetura.html e arquitetura.png)
@@ -210,7 +230,7 @@ stories/
 └── .env                    Seus segredos (fora do git)
 ```
 
-**Para "esquecer" algo:** a memória do assistente é o arquivo `storage/memory.json`, uma lista simples de frases. Pode editá-lo ou apagá-lo. O histórico das histórias fica em `storage/history.db` (tabela `stories`, com a coluna `rating` do feedback humano). O ✕ ao lado de uma história em *Recentes* remove só a cópia local, junto com a avaliação; o card no Azure DevOps não é afetado.
+**Para "esquecer" algo:** a memória do assistente é o arquivo `storage/memory.json`, uma lista simples de frases. Pode editá-lo ou apagá-lo. O histórico das histórias fica em `storage/history.db` (tabela `stories`, com as colunas `rating`, do feedback humano, e `iterations`, da contagem de respostas do assistente). O ✕ ao lado de uma história em *Recentes* remove só a cópia local, junto com a avaliação; o card no Azure DevOps não é afetado.
 
 ## Testes
 

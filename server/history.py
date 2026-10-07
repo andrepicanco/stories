@@ -29,12 +29,16 @@ def _conn():
                     state TEXT NOT NULL DEFAULT '{}',
                     created_at REAL NOT NULL,
                     updated_at REAL NOT NULL,
-                    rating TEXT
+                    rating TEXT,
+                    iterations INTEGER NOT NULL DEFAULT 0
                 )"""
             )
-            # Bancos criados antes do rating ganham a coluna na primeira abertura.
-            if not any(col["name"] == "rating" for col in conn.execute("PRAGMA table_info(stories)")):
+            # Bancos criados antes dessas colunas ganham-nas na primeira abertura.
+            columns = {col["name"] for col in conn.execute("PRAGMA table_info(stories)")}
+            if "rating" not in columns:
                 conn.execute("ALTER TABLE stories ADD COLUMN rating TEXT")
+            if "iterations" not in columns:
+                conn.execute("ALTER TABLE stories ADD COLUMN iterations INTEGER NOT NULL DEFAULT 0")
             yield conn
     finally:
         conn.close()
@@ -74,6 +78,15 @@ def set_rating(story_id: str, rating: str) -> dict | None:
     with _conn() as conn:
         conn.execute("UPDATE stories SET rating = ? WHERE id = ?", (rating, story_id))
     return get(story_id)
+
+
+def add_iteration(story_id: str) -> int | None:
+    """Soma 1 às iterações da história (toda resposta do agente, Gerar ou Responder) e devolve o total, ou None se
+    a história não existir. Soma no próprio UPDATE, sem ler antes, e não altera `updated_at`."""
+    with _conn() as conn:
+        if conn.execute("UPDATE stories SET iterations = iterations + 1 WHERE id = ?", (story_id,)).rowcount == 0:
+            return None
+        return conn.execute("SELECT iterations FROM stories WHERE id = ?", (story_id,)).fetchone()["iterations"]
 
 
 def list_recent(limit: int = 30) -> list[dict]:

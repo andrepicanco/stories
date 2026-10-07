@@ -33,6 +33,7 @@ def build_system_prompt(
     today: date | None = None,
     notion_root: str = "",
     wiki_root: str = "",
+    has_glossary: bool = False,
 ) -> str:
     sources = []
     for group in enabled_groups:
@@ -48,6 +49,12 @@ def build_system_prompt(
             sources.append(f"- {label}: indisponível nesta execução (não configurada ou sem conexão)")
     if not sources:
         sources.append("- Nenhuma fonte externa habilitada: use apenas o que o usuário informou.")
+    if has_glossary:
+        sources.append(
+            "- Glossário de Cobrança (tool glossario_buscar): consulte-o ANTES de buscar nas fontes sempre que houver "
+            "um termo desconhecido ou que não faça sentido para você, em especial siglas, abreviações e jargão "
+            "(ex.: \"reneg\", \"birô\"), e use o nome canônico nos textos do card."
+        )
 
     parts = [
         (persona or DEFAULT_PERSONA).strip(),

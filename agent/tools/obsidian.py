@@ -3,22 +3,17 @@
 Só arquivos .md; pastas ocultas (.obsidian, .git, .trash) são ignoradas. Sem pasta raiz
 configurada, nenhuma tool é registrada."""
 import re
-import unicodedata
 from pathlib import Path
 
 from agent.base import Param, Tool, ToolContext
 from agent.ontology import Effect
+from agent.text import fold as _fold
 
 GROUP = "obsidian"
 MAX_FILE_BYTES = 2_000_000
 MAX_LIST = 200
 MAX_SEARCH_RESULTS = 15
 MAX_SNIPPETS_PER_FILE = 3
-
-
-def _fold(text: str) -> str:
-    """Minúsculas e sem acento, para busca tolerante."""
-    return "".join(c for c in unicodedata.normalize("NFD", text.casefold()) if unicodedata.category(c) != "Mn")
 
 
 class Vault:

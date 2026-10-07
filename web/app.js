@@ -354,6 +354,7 @@ function fillSettingsForm() {
   loadEpicColumns();
   f.azure_mcp_dll.value = (s.azure_mcp.args || [])[0] || "";
   f.wiki_url.value = s.azure.wiki_url || "";
+  f.glossary_path.value = (s.glossary || {}).path || "";
   f.require_feedback.checked = (s.evals || {}).require_human_feedback !== false;
   f.obsidian_root.value = s.obsidian.root_dir;
   f.notion_root.value = s.notion.root_page;
@@ -375,6 +376,7 @@ async function saveSettings(event) {
     azure_mcp: { args: f.azure_mcp_dll.value.trim() ? [f.azure_mcp_dll.value.trim()] : [] },
     obsidian: { root_dir: f.obsidian_root.value.trim() },
     notion: { root_page: f.notion_root.value.trim() },
+    glossary: { path: f.glossary_path.value.trim() },
     evals: { require_human_feedback: f.require_feedback.checked },
     agent: {
       skills_dir: f.skills_dir.value.trim(),
