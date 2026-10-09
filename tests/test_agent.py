@@ -160,7 +160,7 @@ class SkillTests(unittest.TestCase):
     def test_project_skills_are_valid(self):
         real = SkillRegistry(Path(__file__).resolve().parent.parent / "agent" / "skills")
         self.assertEqual(real.errors, [])
-        self.assertIn("user-story-writer-cobranca", real.skills)
+        self.assertIn("story-writer-cobranca", real.skills)
         self.assertIn("notion-navigator-cobranca", real.skills)
 
     def test_frontmatter_without_header(self):

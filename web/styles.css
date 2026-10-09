@@ -84,13 +84,13 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; width: 100%
   cursor: pointer;
 }
 .status { list-style: none; margin: 0; padding: 0; font-family: system-ui, sans-serif; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); }
-.status li { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.status li { display: flex; align-items: center; gap: 10px; padding: 2px 0; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
 .dot.ok { background: #3fae5a; }
 .dot.wait { background: #d9a441; }
 .connect { color: var(--text); margin-left: auto; font-size: 11px; text-transform: none; letter-spacing: 0; }
 .side-user { display: flex; align-items: center; gap: 12px; }
-.user-name { flex: 1; font-size: 20px; }
+.user-name { flex: 1; font-size: 16px; }
 .icon-btn { background: none; border: 0; font-size: 22px; cursor: pointer; padding: 2px; }
 
 /* Main */
