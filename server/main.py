@@ -136,8 +136,8 @@ def status() -> dict:
     """Estado das conexões exibido na sidebar."""
     secrets = settings.secrets_status()
     return {
-        "azure_openai": {"ok": secrets["AZURE_OPENAI_API_KEY"], "state": "ok" if secrets["AZURE_OPENAI_API_KEY"] else "disabled",
-                         "detail": "" if secrets["AZURE_OPENAI_API_KEY"] else "Defina AZURE_OPENAI_* no .env"},
+        "llm": {"ok": secrets["LITELLM_API_KEY"], "state": "ok" if secrets["LITELLM_API_KEY"] else "disabled",
+                "detail": "" if secrets["LITELLM_API_KEY"] else "Defina LITELLM_* no .env"},
         "azure_devops_rest": {"ok": secrets["AZDO_PAT"], "state": "ok" if secrets["AZDO_PAT"] else "disabled",
                               "detail": "" if secrets["AZDO_PAT"] else "Defina AZDO_PAT no .env"},
         "azure_devops_mcp": _mcp_item("azure_mcp", "Configure o Board, o AZDO_PAT e o servidor Azure Boards MCP"),

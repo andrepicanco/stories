@@ -1,9 +1,10 @@
-"""LLM: a única peça que fala com o Azure OpenAI. Trocar de provedor = mexer só aqui."""
+"""LLM: a única peça que fala com o modelo, via gateway LiteLLM (API compatível com a da OpenAI).
+Trocar de provedor = mexer só aqui."""
 import os
 
-from openai import AzureOpenAI
+from openai import OpenAI
 
-REQUIRED_ENV = ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_DEPLOYMENT")
+REQUIRED_ENV = ("LITELLM_BASE_URL", "LITELLM_API_KEY", "LITELLM_MODEL")
 
 
 class LLMConfigError(RuntimeError):
@@ -15,20 +16,15 @@ class LLM:
         missing = [k for k in REQUIRED_ENV if not os.environ.get(k)]
         if missing:
             raise LLMConfigError(f"Defina no .env: {', '.join(missing)}")
-        endpoint = os.environ["AZURE_OPENAI_ENDPOINT"]
-        if not endpoint.startswith(("http://", "https://")):
-            endpoint = "https://" + endpoint
-        self.client = AzureOpenAI(
-            azure_endpoint=endpoint,
-            api_key=os.environ["AZURE_OPENAI_API_KEY"],
-            api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-10-21"),
-            timeout=timeout,
-        )
-        self.deployment = os.environ["AZURE_OPENAI_DEPLOYMENT"]
+        base_url = os.environ["LITELLM_BASE_URL"]
+        if not base_url.startswith(("http://", "https://")):
+            base_url = "https://" + base_url
+        self.client = OpenAI(base_url=base_url, api_key=os.environ["LITELLM_API_KEY"], timeout=timeout)
+        self.model = os.environ["LITELLM_MODEL"]
 
     def chat(self, messages: list, tools: list):
         """Uma chamada ao modelo. Retorna a mensagem do assistente (texto e/ou tool_calls)."""
-        kwargs = {"model": self.deployment, "messages": messages}
+        kwargs = {"model": self.model, "messages": messages}
         if tools:
             kwargs["tools"] = tools
         return self.client.chat.completions.create(**kwargs).choices[0].message

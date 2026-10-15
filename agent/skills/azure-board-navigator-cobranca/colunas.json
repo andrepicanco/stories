@@ -1,0 +1,300 @@
+{
+  "_meta": {
+    "skill": "azure-board-navigator-cobranca",
+    "board": "Stories",
+    "time": "Renegociacao e Cobranca (Squad Violet)",
+    "levantado_em": "2026-10-15",
+    "fontes": [
+      "API REST do Azure DevOps (boards/columns, stateMappings, workitemtypes/states)",
+      "Wiki: Operacional/SDLC/SDLC Renegociacao e Cobranca",
+      "Wiki: Gestao/Rito daily e rastreio",
+      "Validação do André (PO) em 2026-10-15"
+    ],
+    "como_ler": "Cada item de `colunas` é uma coluna do board, na ordem do fluxo. `estado` traz o System.State que o card tem quando está naquela coluna, por tipo. A coluna real do card é o campo System.BoardColumn; o estado (System.State) só serve de atalho quando o mapeamento é inequívoco (ver `estado_para_coluna`).",
+    "fase": "Agrupamento proposto para relatórios (não existe no board). [A VALIDAR]"
+  },
+
+  "ordem_do_fluxo": [
+    "Backlog", "Refining", "Tech Refining", "Ready DOR", "Planned", "In Progress",
+    "Waiting Validation QA", "Validating QA", "UAT PO/TL",
+    "Package Integration", "Waiting Deploy", "Waiting Store", "Validating Prod", "Encerrado"
+  ],
+
+  "colunas": [
+    {
+      "ordem": 0,
+      "coluna": "Backlog",
+      "estado": {"User Story": "To Do", "Technical Story": "To Do", "Bug": "To Do", "Spike": "To do"},
+      "categoria_azure": "Proposed",
+      "wip": null,
+      "fase": "fila",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "PO",
+      "significado": "Card criado e aguardando refinamento. Ainda não foi explicado ao time.",
+      "saida_exige": []
+    },
+    {
+      "ordem": 1,
+      "coluna": "Refining",
+      "estado": {"User Story": "Refining", "Technical Story": "Refining", "Bug": "Refining", "Spike": "Refining"},
+      "categoria_azure": "Proposed",
+      "wip": 5,
+      "fase": "refinamento",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "PO, com TL na viabilidade",
+      "significado": "Refinamento de negócio (discovery): o que se quer, regras, dúvidas de negócio respondidas.",
+      "saida_exige": [
+        "objetivo claro",
+        "escopo e restrições de dado definidos",
+        "critérios de aceite verificáveis pelo resultado"
+      ]
+    },
+    {
+      "ordem": 2,
+      "coluna": "Tech Refining",
+      "estado": {"User Story": "Tech Refining", "Technical Story": "Tech Refining", "Bug": "Tech Refining", "Spike": "Tech Refining"},
+      "categoria_azure": "Proposed",
+      "wip": 5,
+      "fase": "refinamento",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "QA (cenários de teste) e Dev/TL (plano técnico)",
+      "significado": "Refinamento técnico: como será feito, estimativa, recursos impactados, dependências. É onde o DoR é conferido.",
+      "saida_exige": [
+        "cenários de QA no card",
+        "plano técnico em fatias no repositório",
+        "dependência externa com responsável e chamado aberto"
+      ]
+    },
+    {
+      "ordem": 3,
+      "coluna": "Ready DOR",
+      "estado": {"User Story": "Ready", "Technical Story": "Ready", "Bug": "Ready", "Spike": "Ready"},
+      "categoria_azure": "Proposed",
+      "wip": 5,
+      "fase": "pronto",
+      "em_uso": false,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": null,
+      "significado": "DoR atendida, aguardando ser puxado. Sem uso no fluxo atual do time; mantida como referência.",
+      "saida_exige": []
+    },
+    {
+      "ordem": 4,
+      "coluna": "Planned",
+      "estado": {"User Story": "Planned", "Technical Story": "Planned", "Bug": "Planned", "Spike": "Planned"},
+      "categoria_azure": "InProgress",
+      "wip": 5,
+      "fase": "pronto",
+      "em_uso": false,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": null,
+      "significado": "Planejado para a sprint, aguardando início. Herança do Scrum (o time migrou para Kanban em 02/2025). Sem uso no fluxo atual; mantida como referência.",
+      "saida_exige": []
+    },
+    {
+      "ordem": 5,
+      "coluna": "In Progress",
+      "estado": {"User Story": "In Progress", "Technical Story": "In Progress", "Bug": "In Progress", "Spike": "In Progress"},
+      "categoria_azure": "InProgress",
+      "wip": 7,
+      "fase": "desenvolvimento",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "Dev que puxou o card",
+      "significado": "Desenvolvimento: código, teste local, PR, code review e documentação de subida.",
+      "saida_exige": [
+        "teste da fatia rodou com saída observada",
+        "code review APTO",
+        "versão publicada em QA"
+      ]
+    },
+    {
+      "ordem": 6,
+      "coluna": "Waiting Validation QA",
+      "estado": {"User Story": "Waiting Validation QA", "Technical Story": "Waiting Validation QA", "Bug": "Waiting Validation QA", "Spike": "Validating"},
+      "categoria_azure": "InProgress",
+      "wip": 5,
+      "fase": "validacao",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "QA",
+      "significado": "Desenvolvido e publicado em QA, na fila para o QA começar a testar.",
+      "saida_exige": [],
+      "entrada_exige": [
+        "evidência local de teste do Dev",
+        "subtask [GMUD] Preparação criada",
+        "comentário [QA] Sugestão de teste"
+      ]
+    },
+    {
+      "ordem": 7,
+      "coluna": "Validating QA",
+      "estado": {"User Story": "Validating QA", "Technical Story": "Validating QA", "Bug": "Validating QA", "Spike": "Validating"},
+      "categoria_azure": "InProgress",
+      "wip": 5,
+      "fase": "validacao",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "QA",
+      "significado": "Execução funcional no ambiente de QA. Reprovado volta ao Dev (coluna e Assigned To).",
+      "saida_exige": [
+        "relatório de QA no card com status, ambiente, cenários e evidências"
+      ],
+      "notas": "Coluna dividida em Doing/Done (isSplit). Hoje System.BoardColumnDone vem sempre falso."
+    },
+    {
+      "ordem": 8,
+      "coluna": "UAT PO/TL",
+      "estado": {"User Story": "User Acceptance Testing", "Technical Story": "User Acceptance Testing", "Bug": "User Acceptance Testing", "Spike": "User Acceptance Testing"},
+      "categoria_azure": "InProgress",
+      "wip": 5,
+      "fase": "validacao",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "Technical Story: TL (Renê). User Story: PO (André), foco em validar a experiência no front end. Bug e Spike: [A VALIDAR]",
+      "significado": "Aceite de valor: quem aceita usa de verdade e decide aceitar ou devolver com motivo registrado.",
+      "saida_exige": [
+        "aceite registrado no card, ou recusa com motivo"
+      ],
+      "notas": "Depois do aceite o card volta ao Dev, em Package Integration."
+    },
+    {
+      "ordem": 9,
+      "coluna": "Package Integration",
+      "estado": {"User Story": "Package Integration", "Technical Story": "Package Integration", "Bug": "Package Integration", "Spike": "In Progress"},
+      "categoria_azure": "Resolved",
+      "wip": 5,
+      "fase": "entrega",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "Dev (o card volta para o nome do Dev)",
+      "significado": "Aceito, aguardando GMUD: abertura, pacote completo e aprovações (pelo menos 1 dia). NÃO está em produção.",
+      "saida_exige": [
+        "GMUD aberta e aprovações fechadas"
+      ],
+      "entrada_exige": [
+        "aceite do PO/TL no card",
+        "pacote de GMUD completo"
+      ]
+    },
+    {
+      "ordem": 10,
+      "coluna": "Waiting Deploy",
+      "estado": {"User Story": "Waiting Deploy", "Technical Story": "Waiting Deploy", "Bug": "Waiting Deploy", "Spike": "In Progress"},
+      "categoria_azure": "Resolved",
+      "wip": 5,
+      "fase": "entrega",
+      "em_uso": true,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": "Dev",
+      "significado": "GMUD aprovada, aguardando a janela/data de deploy (dia seguinte ou data pedida). É janela, não capacidade técnica. NÃO está em produção.",
+      "saida_exige": [
+        "deploy feito na data combinada"
+      ]
+    },
+    {
+      "ordem": 11,
+      "coluna": "Waiting Store",
+      "estado": {"User Story": "Waiting Store", "Technical Story": "Waiting Store", "Bug": "Waiting Store", "Spike": "In Progress"},
+      "categoria_azure": "Resolved",
+      "wip": 5,
+      "fase": "entrega",
+      "em_uso": false,
+      "em_producao": false,
+      "concluido": false,
+      "responsavel": null,
+      "significado": "Aguardando publicação na loja de aplicativos (mobile). Sem uso no fluxo atual do time; mantida como referência.",
+      "saida_exige": []
+    },
+    {
+      "ordem": 12,
+      "coluna": "Validating Prod",
+      "estado": {"User Story": "Validating Prod", "Technical Story": "Validating Prod", "Bug": "Validating Prod", "Spike": "In Progress"},
+      "categoria_azure": "Resolved",
+      "wip": 5,
+      "fase": "producao",
+      "em_uso": true,
+      "em_producao": true,
+      "concluido": false,
+      "responsavel": "Dev",
+      "significado": "Já está em produção (produção assistida): o time acompanha e evidencia o comportamento esperado antes de encerrar. Evidência e fechamento da GMUD acontecem aqui.",
+      "saida_exige": [
+        "evidência de produção anexada no card",
+        "GMUD fechada"
+      ]
+    },
+    {
+      "ordem": 13,
+      "coluna": "Encerrado",
+      "estado": {"User Story": "Done", "Technical Story": "Done", "Bug": "Done", "Spike": "Done"},
+      "categoria_azure": "Completed",
+      "wip": null,
+      "fase": "concluido",
+      "em_uso": true,
+      "em_producao": true,
+      "concluido": true,
+      "responsavel": null,
+      "significado": "Concluído e em produção.",
+      "saida_exige": []
+    }
+  ],
+
+  "estado_para_coluna": {
+    "_nota": "Vale para User Story, Technical Story e Bug. Sempre que possível use System.BoardColumn em vez disto.",
+    "User Story / Technical Story / Bug": {
+      "To Do": "Backlog",
+      "Refining": "Refining",
+      "Tech Refining": "Tech Refining",
+      "Ready": "Ready DOR",
+      "Planned": "Planned",
+      "In Progress": "In Progress",
+      "Waiting Validation QA": "Waiting Validation QA",
+      "Validating QA": "Validating QA",
+      "User Acceptance Testing": "UAT PO/TL",
+      "Package Integration": "Package Integration",
+      "Waiting Deploy": "Waiting Deploy",
+      "Waiting Store": "Waiting Store",
+      "Validating Prod": "Validating Prod",
+      "Done": "Encerrado"
+    },
+    "Spike": {
+      "_nota": "Estado ambíguo: o mesmo estado cobre várias colunas. Sem System.BoardColumn não dá para saber a coluna exata.",
+      "To do": ["Backlog"],
+      "Refining": ["Refining"],
+      "Tech Refining": ["Tech Refining"],
+      "Ready": ["Ready DOR"],
+      "Planned": ["Planned"],
+      "In Progress": ["In Progress", "Package Integration", "Waiting Deploy", "Waiting Store", "Validating Prod"],
+      "Validating": ["Waiting Validation QA", "Validating QA"],
+      "User Acceptance Testing": ["UAT PO/TL"],
+      "Done": ["Encerrado"]
+    }
+  },
+
+  "sem_coluna": {
+    "Discontinued": "Card descartado (categoria Removed). Fica sem coluna. Excluir de contagens de andamento.",
+    "Mvp Integration": "Estado existe em User Story e Technical Story, mas não há coluna no board Stories. [A VALIDAR]",
+    "tipos_auxiliares": "Task, Test Case, Test Suite, Test Plan e Defect não aparecem no board Stories (BoardColumn vazio); o estado deles segue outro ciclo (ex.: Test Case 'Design', Task 'To Do/Active/Done')."
+  },
+
+  "fora_do_escopo": [
+    "Board de Epics (Wishlist, Discovery, Proposed, Tech Refining, Quarter priority, In Progress, Measurement, Done)",
+    "Board Planos de ação",
+    "Board Fragilidades e Riscos",
+    "Tipos Sustaining, Issue, Release, Requirement, MKT Story, BI Story, Design Story, Change Request, IT Request, Credit Policy (mapeamento de estado diferente; sem uso relevante no time)"
+  ]
+}

@@ -5,7 +5,7 @@ const $ = (sel) => document.querySelector(sel);
 const DEFAULT_TITLE = "Nova História";
 
 const STATUS_LABELS = {
-  azure_openai: "Azure OpenAI",
+  llm: "LLM",
   azure_devops_rest: "Azure DevOps API",
   azure_devops_mcp: "Azure DevOps MCP",
   notion_mcp: "Notion MCP",

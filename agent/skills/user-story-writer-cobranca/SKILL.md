@@ -52,6 +52,9 @@ não pule mesmo que o usuário tenha fornecido uma descrição detalhada.
    dependência, conflito ou item de "Fora de escopo" — não o absorva ao escopo do novo card.
 4. Se um card lido referenciar outros cards que sejam decisivos para o escopo (pai, predecessor,
    dependência), leia-os também.
+5. Para dizer em que etapa cada card lido está (o que a coluna ou o estado significa, quem segura o
+   card, se já está em produção), use a skill `azure-board-navigator-cobranca` em vez de interpretar
+   o nome da coluna.
 
 **2.2 Documentação de apoio**
 

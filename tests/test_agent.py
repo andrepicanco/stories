@@ -162,6 +162,13 @@ class SkillTests(unittest.TestCase):
         self.assertEqual(real.errors, [])
         self.assertIn("story-writer-cobranca", real.skills)
         self.assertIn("notion-navigator-cobranca", real.skills)
+        self.assertIn("azure-board-navigator-cobranca", real.skills)
+
+    def test_board_navigator_columns_file(self):
+        real = SkillRegistry(Path(__file__).resolve().parent.parent / "agent" / "skills")
+        data = json.loads(real.load("azure-board-navigator-cobranca", "colunas.json"))
+        self.assertEqual([c["coluna"] for c in data["colunas"]], data["ordem_do_fluxo"])
+        self.assertEqual([c["coluna"] for c in data["colunas"] if c["em_producao"]], ["Validating Prod", "Encerrado"])
 
     def test_frontmatter_without_header(self):
         self.assertEqual(parse_frontmatter("só texto"), ({}, "só texto"))

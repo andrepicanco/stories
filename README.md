@@ -59,7 +59,7 @@ Pense no sistema como um escritório com cinco áreas:
 | 🧰 **Ferramentas** (verde) | As "mãos" do assistente: ler o Notion, ler cards do Azure, ler suas notas. **Só leitura.** | `agent/tools/` |
 | 📒 **Memória e skills** (amarelo e rosa) | O que o assistente aprende com você e as instruções de como escrever cada tipo de card. | `agent/memory.py`, `agent/skills/` |
 
-Do lado de fora ficam os serviços que a ferramenta usa: o **Azure OpenAI** (o modelo de IA), o **Azure DevOps** (seus cards), o **Notion** e a pasta do **Obsidian**.
+Do lado de fora ficam os serviços que a ferramenta usa: o **gateway LiteLLM** (o modelo de IA), o **Azure DevOps** (seus cards), o **Notion** e a pasta do **Obsidian**.
 
 ### O caminho de um pedido
 
@@ -83,7 +83,7 @@ Do lado de fora ficam os serviços que a ferramenta usa: o **Azure OpenAI** (o m
 **Você precisa de:**
 
 - **Windows** com **Python 3.11** instalado.
-- **Acesso ao Azure OpenAI**: endereço (endpoint), chave e o nome do *deployment* do modelo.
+- **Acesso ao gateway LiteLLM**: endereço (URL base), chave e o nome do modelo.
 - **Um PAT do Azure DevOps** (Personal Access Token) com permissão de leitura e escrita em *Work Items*.
 - *(Opcional)* **.NET SDK 10** e o repositório `azure-boards-mcp` compilado, para as ferramentas extras de histórico e relatórios do board.
 - *(Opcional)* Uma conta no Notion com acesso ao workspace do projeto.
@@ -103,9 +103,9 @@ copy .env.example .env
 
 ```ini
 AZDO_PAT=cole_seu_pat_aqui
-AZURE_OPENAI_ENDPOINT=https://seu-recurso.openai.azure.com
-AZURE_OPENAI_API_KEY=cole_sua_chave_aqui
-AZURE_OPENAI_DEPLOYMENT=nome_do_seu_deployment
+LITELLM_BASE_URL=https://seu-gateway/v1
+LITELLM_API_KEY=cole_sua_chave_aqui
+LITELLM_MODEL=nome_do_modelo
 ```
 
 > 🔒 O `.env` guarda senhas e **nunca vai para o git** (já está no `.gitignore`). Não compartilhe esse arquivo.
@@ -122,7 +122,7 @@ Depois abra no navegador: **http://127.0.0.1:8020**
 
 Para parar, pressione `Ctrl+C` no terminal. Se estiver desenvolvendo e quiser que o servidor recarregue sozinho ao salvar arquivos, acrescente `--reload` ao final do comando.
 
-Na **barra lateral** há quatro luzes de status: **Azure OpenAI**, **Azure DevOps API**, **Azure DevOps MCP** e **Notion MCP**. Verde é conectado. Passe o mouse sobre uma luz vermelha para ver o motivo.
+Na **barra lateral** há quatro luzes de status: **LLM**, **Azure DevOps API**, **Azure DevOps MCP** e **Notion MCP**. Verde é conectado. Passe o mouse sobre uma luz vermelha para ver o motivo.
 
 ## Configuração (⚙️)
 

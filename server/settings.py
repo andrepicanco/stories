@@ -8,7 +8,7 @@ SETTINGS_PATH = ROOT / "config" / "settings.json"
 LOCAL_PATH = ROOT / "config" / "settings.local.json"
 ENV_PATH = ROOT / ".env"
 
-SECRET_KEYS = ("AZDO_PAT", "AZURE_OPENAI_API_KEY")
+SECRET_KEYS = ("AZDO_PAT", "LITELLM_API_KEY")
 
 
 def load_dotenv(path: Path = ENV_PATH) -> None:
